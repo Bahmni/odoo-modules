@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+	<record id="inherit_sale_order_form" model="ir.ui.view">
+		<field name="name">inherit.sale.order.form</field>
+		<field name="model">sale.order</field>
+		<field name="inherit_id" ref="sale.view_order_form"/>
+		<field name="arch" type="xml">
+			<xpath expr="//field[@name='partner_shipping_id']" position="after">
+				<field name="partner_village"/>
+				<field name="care_setting" />
+				<field name="provider_name"/>
+			</xpath>
+			<xpath expr="//notebook/page[1]/group" position="replace">
+				<div class="col-xs-5 pull-right text-right" style="padding-right:0px">
+					<div class="col-xs-6 footer_label" style="min-height: 28px;">
+						<label for="amount_untaxed" />
+					</div>
+					<div class="col-xs-6 footer_field" style="min-height: 28px;">
+						 <field name="amount_untaxed"/>
+					</div>
+					<div class="col-xs-6 footer_label" style="min-height: 28px;">
+						<label for="amount_tax"/>
+					</div>
+					<div class="col-xs-6 footer_field" style="min-height: 28px;">
+						 <field name="amount_tax"/>
+					</div>
+					<div class="col-xs-6 footer_label" style="min-height: 28px;">
+						<label for="discount_type"/>
+					</div>
+					<div class="col-xs-6 footer_field"  style="min-height: 28px;">
+						 <field name="discount_type" required="1"/>
+					</div>
+					<div class="col-xs-6 footer_label" style="min-height: 28px;" 
+						attrs="{'invisible': [('discount_type', '!=', 'percentage')]}">
+						<label for="discount_percentage" />
+					</div>
+					<div class="col-xs-6 footer_field" 
+						style="white-space:nowrap;padding-right:15px;min-height: 28px;"
+						attrs="{'invisible': [('discount_type', '!=', 'percentage')]}" >
+						 <field name="discount_percentage" /> <b style="padding-left:2px">%</b>
+					</div>
+					<div class="col-xs-6 footer_label" style="min-height:33px;" 
+						attrs="{'invisible': [('discount_type', '=', 'none')]}">
+						<label for="discount" /> 
+					</div>
+					<div class="col-xs-6 footer_field" style="min-height:33px;"
+						attrs="{'invisible': [('discount_type', '=', 'none')]}">
+						 <field name="discount"  context="{'readonly_by_pass': True}"
+						 attrs="{'readonly': [('discount_type', '=', 'percentage')]}"
+						  style="width:100% !important"/>
+					</div> <!-- readonly bypass added to save the field even if it is in readonly state -->
+					
+					<div class="col-xs-6 footer_label" style="min-height: 28px;"
+						attrs="{'invisible': [('discount_type', '=', 'none')]}">
+						<label for="disc_acc_id" /> 
+					</div>
+					<div class="col-xs-6 footer_field" style="min-height: 28px;"
+						attrs="{'invisible': [('discount_type', '=', 'none')]}">
+						 <field name="disc_acc_id"  />
+					</div>
+					<div class="col-xs-6 footer_label" style="min-height: 28px;">
+						<label for="round_off_amount"  /> 
+					</div>
+					<div class="col-xs-6 footer_field" style="min-height: 28px;">
+						 <field name="round_off_amount"  />
+					</div>
+					<div class="col-xs-6 footer_label" style="min-height: 28px;">
+						<label for="chargeable_amount"  /> 
+					</div>
+					<div class="col-xs-6 footer_field" style="min-height: 28px;">
+						 <field name="chargeable_amount"  />
+					</div>
+					<div class="col-xs-6 footer_label" style="min-height: 28px;">
+						<label for="default_quantity"  /> 
+					</div>
+					<div class="col-xs-6 footer_field" style="min-height: 28px;">
+						 <field name="default_quantity"  />
+					</div>
+					<group style="width: 100%; border-top: 1px solid #cacaca;white-space:nowrap;">
+						<div class="col-xs-6 oe_right footer_label">
+							<label for="amount_total" style="font-size:1.3em" string="Net Amount"/>
+							<button name="button_dummy" states="draft,sent" string="(update)" 
+							type="object" class="oe_edit_only oe_link"/>
+						</div>
+						<div class="col-xs-6 footer_field footer_text_bold" >
+							<field name="amount_total" />
+						</div>
+						<div class="col-xs-6 oe_right footer_label">
+							<label for="prev_outstanding_balance" string="Previous Balance"/>
+						</div>
+						<div class="col-xs-6 footer_field" >
+							<field name="prev_outstanding_balance" />
+						</div>
+					</group>
+					<group style="width: 100%; border-top: 1px solid #cacaca;white-space:nowrap;">
+						<div class="col-xs-6 oe_right footer_label footer_text_bold">
+							<label for="total_outstanding_balance" 
+							 style="font-size:1em;font-weight:bold" string="Total Outstanding"/>
+						</div>
+						<div class="col-xs-6 footer_field footer_text_bold" >
+							<field name="total_outstanding_balance" />
+						</div>
+					</group>
+                </div>
+			</xpath>
+		</field>
+	</record>
+	
+	<record id="sale.action_orders" model="ir.actions.act_window">
+		<field name="name">Sales Orders</field>
+		<field name="type">ir.actions.act_window</field>
+		<field name="res_model">sale.order</field>
+		<field name="view_type">form</field>
+		<field name="view_mode">tree,kanban,form,calendar,pivot,graph</field>
+		<field name="search_view_id" ref="sale.sale_order_view_search_inherit_sale"/>
+		<field name="context">{'readonly_by_pass': True}</field>
+		<field name="domain">[('state', 'not in', ('draft', 'sent', 'cancel'))]</field>
+		<field name="help" type="html">
+			<p class="oe_view_nocontent_create">
+				Create a Quotation, the first step of a new sale.
+			</p>
+			<p>
+				Once the quotation is confirmed, it becomes a sales order.
+				You'll be able to invoice it and collect payments.
+				From the <i>Sales Orders</i> menu, you can track delivery
+				orders or services.
+			</p>
+		</field>
+	</record>
+
+</odoo>

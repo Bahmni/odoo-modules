@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+	
+	<record id="view_pack_operation_lot_form_inherit" model="ir.ui.view">
+		<field name="name">view.pack.operation.lot.form.inherit</field>
+		<field name="model">stock.pack.operation</field>
+		<field name="inherit_id" ref="stock.view_pack_operation_lot_form"/>
+		<field name="arch" type="xml">
+			<xpath expr="//field[@name='product_id']" position="before">
+				<field name="id" invisible="1"/>
+			</xpath>
+			<xpath expr="//field[@name='pack_lot_ids']" position="replace">
+				<field name="pack_lot_ids" nolabel="1" 
+					attrs="{'readonly': [('state', '=', 'done')]}"
+					context="{'product_id': product_id, 'operation_id': id, 'pack_lot_ids': pack_lot_ids}">
+					<tree editable="bottom" decoration-success="qty_todo==qty" decoration-danger="(qty_todo &gt; 0) and (qty&gt;qty_todo)">
+						<field name="lot_name" invisible="not context.get('only_create', False)"/>
+						<field name="lot_id" invisible="context.get('only_create', False)"
+							domain="[('product_id','=', parent.product_id)]"
+							context="{'default_product_id': parent.product_id, 'active_pack_operation': parent.id}"/>
+						<field name="qty_todo" invisible="not context.get('show_reserved') or context.get('serial') or context.get('state_done')" readonly="1"/>
+						<field name="qty" invisible="context.get('serial')"/>
+						<button name="do_minus" type="object" icon="fa-minus-square" attrs="{'invisible': [('qty', '&lt;=', 0.99)]}" invisible="not context.get('show_reserved') or context.get('state_done')"/>
+						<button name="do_plus" type="object" icon="fa-plus-square" attrs="{'invisible': [('plus_visible', '=', False)]}" invisible="not context.get('show_reserved') or context.get('state_done')"/>
+						<field name="plus_visible" invisible="1"/>
+						<field name="move_id" invisible="1"/>
+						<field name="cost_price" invisible="not context.get('only_create', False)"/>
+						<field name="sale_price" invisible="not context.get('only_create', False)"/>
+						<field name="mrp" invisible="not context.get('only_create', False)"/>
+						<field name="expiry_date" invisible="not context.get('only_create', False)"/>
+					</tree>
+				</field>
+			</xpath>
+		</field>
+	</record>
+	
+</odoo>

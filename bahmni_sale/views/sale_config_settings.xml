@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+	
+	<record id="inherit_view_sales_config" model="ir.ui.view">
+		<field name="name">inherit.view.sales.config</field>
+		<field name="model">sale.config.settings</field>
+		<field name="inherit_id" ref="sale.view_sales_config"/>
+		<field name="arch" type="xml">
+			<xpath expr="//div[@id='main']" position="inside">
+				<group string="Sales Features" name="sales_features">
+					<label for="group_final_so_charge" style="white-space:nowrap;"/><field name="group_final_so_charge" nolabel="1"/>
+					<label for="group_default_quantity"/>
+					<field name="group_default_quantity" nolabel="1"/>
+				</group>
+			</xpath>
+		</field>
+	</record>
+	
+</odoo>
