@@ -12,7 +12,7 @@
 				<field name="provider_name"/>
 			</xpath>
 			<xpath expr="//field[@name='client_order_ref']" position="after">
-				<field name="dispensed"/>
+				<field name="dispensed" invisible="1"/>
 			</xpath>
 			<xpath expr="//notebook/page[1]/group" position="replace">
 				<div class="col-xs-5 pull-right text-right" style="padding-right:0px">

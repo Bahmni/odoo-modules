@@ -11,7 +11,6 @@ class SaleAdvancePaymentInv(models.TransientModel):
     def _create_invoice(self, order, so_line, amount):
         '''Inherited this method to add values for fields,
          which are newly added to account_invoice class in customization'''
-        print "create invoice method inherti>>>>>>>>>>>>>>>>>", amount
         inv_obj = self.env['account.invoice']
         ir_property_obj = self.env['ir.property']
 

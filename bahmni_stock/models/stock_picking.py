@@ -4,7 +4,7 @@ from odoo import fields, models
 
 class StockPicking(models.Model):
     _inherit = 'stock.picking'
-    
+
     def _create_lots_for_picking(self):
             Lot = self.env['stock.production.lot']
             for pack_op_lot in self.mapped('pack_operation_ids').mapped('pack_lot_ids'):

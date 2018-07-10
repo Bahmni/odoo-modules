@@ -12,7 +12,7 @@ from odoo.tools import pickle
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
-    
+
     @api.depends('order_line.price_total', 'discount', 'chargeable_amount')
     def _amount_all(self):
         """
@@ -180,15 +180,17 @@ class SaleOrder(models.Model):
         auto_convert_set = pickle.loads(self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
                                                                       ('name', '=', 'convert_dispensed')]).value.encode('utf-8'))
         if auto_convert_set and vals.get('dispensed'):
+            # confirm quotation
             res.action_confirm()
+            # process the delivery order related to this order
             pickings = self.env['stock.picking'].search([('group_id', '=', res.procurement_group_id.id)]) if res.procurement_group_id else []
             for pick in pickings:
                 for ln in pick.pack_operation_product_ids:
-                    # unlinked already populated lot_ids, as in bahmni according to expiry_date assignment is imp.
-                    for l in ln.pack_lot_ids:
-                        l.unlink()
                     required_qty = ln.product_qty
                     if ln.product_id.tracking != 'none':
+                        # unlinked already populated lot_ids, as in bahmni according to expiry_date assignment is imp.
+                        for l in ln.pack_lot_ids:
+                            l.unlink()
                         pack_lot_ids = []
                         alloted_lot_ids = []
                         while required_qty != 0:
@@ -222,7 +224,35 @@ class SaleOrder(models.Model):
                                     alloted_lot_ids.append(lot_id.id)
                         ln.pack_lot_ids = pack_lot_ids
                         ln.qty_done = ln.product_qty
+                    elif ln.product_id.tracking == 'none':
+                        ln.qty_done = ln.product_qty
                 pick.do_new_transfer()
+            # create and process the invoice
+            ctx = {'active_ids': [res.id]}
+            default_vals = self.env['sale.advance.payment.inv'
+                                    ].with_context(ctx).default_get(['count', 'deposit_taxes_id',
+                                                                     'advance_payment_method', 'product_id',
+                                                                     'deposit_account_id'])
+            payment_inv_wiz = self.env['sale.advance.payment.inv'].with_context(ctx).create(default_vals)
+            payment_inv_wiz.with_context(ctx).create_invoices()
+            for inv in res.invoice_ids:
+                inv.action_invoice_open()
+                account_payment_env = self.env['account.payment']
+                fields = account_payment_env.fields_get().keys()
+                default_fields = account_payment_env.with_context({'default_invoice_ids': [(4, inv.id, None)]}).default_get(fields)
+                journal_id = self.env['account.journal'].search([('type', '=', 'cash')],
+                                                                limit=1)
+                default_fields.update({'journal_id': journal_id.id})
+                payment_method_ids = self.env['account.payment.method'
+                                              ].search([('payment_type', '=', default_fields.get('payment_type'))]).ids
+                if default_fields.get('payment_type') == 'inbound':
+                    journal_payment_methods = journal_id.inbound_payment_method_ids.ids
+                elif default_fields.get('payment_type') == 'outbond':
+                    journal_payment_methods = journal_id.outbound_payment_method_ids.ids
+                common_payment_method = list(set(payment_method_ids).intersection(set(journal_payment_methods)))
+                common_payment_method.sort()
+                default_fields.update({'payment_method_id': common_payment_method[0]})
+                account_payment = account_payment_env.create(default_fields)
+                account_payment.post()
         return res
-    
     

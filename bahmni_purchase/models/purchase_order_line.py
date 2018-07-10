@@ -14,6 +14,7 @@ class PurchaseOrderLine(models.Model):
 
     @api.onchange('product_id')
     def onchange_product_id(self):
+        '''Set product category in purchase order line, on change of product_id'''
         result = super(PurchaseOrderLine, self).onchange_product_id()
         if self.product_id:
             self.prod_categ_id = self.product_id.categ_id.id
@@ -21,6 +22,7 @@ class PurchaseOrderLine(models.Model):
 
     @api.onchange('product_qty', 'product_uom')
     def _onchange_quantity(self):
+        '''Method to get mrp for product from vendor configuration in product master'''
         if not self.product_id:
             return
 

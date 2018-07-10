@@ -15,7 +15,6 @@ class StockPackOperationLot(models.Model):
         if operation_id:
             pack_operation = self.env['stock.pack.operation'].browse(operation_id)
             pack_lot_ids = ctx.get('pack_lot_ids')
-            print ">>>>>>>", pack_lot_ids
             assigned_moves = [x[2].get('move_id') for x in pack_lot_ids if x[2]]
             mv_op_link_ids = self.env['stock.move.operation.link'].search([('operation_id', '=', operation_id),
                                                                            ('move_id', 'not in', assigned_moves)],
