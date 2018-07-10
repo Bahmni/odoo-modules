@@ -122,7 +122,7 @@
 		<field name="view_mode">tree,kanban,form,calendar,pivot,graph</field>
 		<field name="search_view_id" ref="sale.sale_order_view_search_inherit_sale"/>
 		<field name="context">{'readonly_by_pass': True}</field>
-		<field name="domain">[('state', 'not in', ('draft', 'sent', 'cancel'))]</field>
+		<field name="domain">[('state', 'not in', ('draft', 'sent'))]</field>
 		<field name="help" type="html">
 			<p class="oe_view_nocontent_create">
 				Create a Quotation, the first step of a new sale.
@@ -135,5 +135,34 @@
 			</p>
 		</field>
 	</record>
+	
+<!--inherited this action to add readonly by pass in context, 
+as discount fields are readonly in case of chargable amount is editable-->
+	<record id="sale.action_quotations" model="ir.actions.act_window">
+        <field name="name">Quotations</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_type">form</field>
+        <field name="view_id" ref="sale.view_quotation_tree"/>
+        <field name="view_mode">tree,kanban,form,calendar,pivot,graph</field>
+        <field name="search_view_id" ref="sale.sale_order_view_search_inherit_quotation"/>
+        <field name="domain">[('state', 'in', ('draft', 'sent'))]</field>
+        <field name="context">{'hide_sale': True,'readonly_by_pass': True}</field>
+        <field name="help" type="html">
+          <p class="oe_view_nocontent_create">
+            Create a Quotation, the first step of a new sale.
+          </p><p>
+            Your next actions should flow efficiently: confirm the Quotation
+            to a Sale Order, then create the Invoice and collect the Payment.
+          </p><p>
+            Note that once a Quotation becomes a Sale Order, it will be moved
+            from the Quotations list to the Sales Order list.
+          </p>
+        </field>
+    </record>
+    
+    <menuitem id="sale.menu_sale_quotations"
+                action="sale.action_quotations" parent="sales_team.menu_sales"
+                sequence="11"/>
 
 </odoo>

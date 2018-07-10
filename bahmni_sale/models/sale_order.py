@@ -101,12 +101,14 @@ class SaleOrder(models.Model):
     def onchange_discount_percentage(self):
         '''Calculate discount amount, when discount is entered in terms of %'''
         amount_total = self.amount_untaxed + self.amount_tax
-        if self.chargeable_amount:
-            self.discount = amount_total - self.chargeable_amount
-        elif self.discount_percentage:
-            self.discount = amount_total * self.discount_percentage / 100
-        elif amount_total:
-            self.discount_percentage = (self.discount/ amount_total) * 100
+        if self.discount_percentage:
+            self.discount = (amount_total * self.discount_percentage / 100)
+
+    @api.onchange('discount')
+    def onchange_discount(self):
+        amount_total = self.amount_untaxed + self.amount_tax
+        if self.discount and self.discount_type == 'percentage':
+            self.discount_percentage = (self.discount / amount_total) * 100
 
     @api.onchange('chargeable_amount')
     def onchange_chargeable_amount(self):
@@ -169,7 +171,8 @@ class SaleOrder(models.Model):
             'team_id': self.team_id.id,
             'discount_type': self.discount_type,
             'discount_percentage': self.discount_percentage,
-            'disc_acc_id': self.disc_acc_id.id
+            'disc_acc_id': self.disc_acc_id.id,
+            'discount': self.discount,
         }
         return invoice_vals
 

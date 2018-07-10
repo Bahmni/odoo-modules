@@ -65,6 +65,12 @@ class SaleAdvancePaymentInv(models.TransientModel):
                           'team_id': order.team_id.id,
                           'user_id': order.user_id.id,
                           'comment': order.note,
+#since this method is called when down payments are done, hence none type of discount will get applied                           
+#                           'discount_type': order.discount_type,
+#                           'discount_percentage': order.discount_percentage,
+#                           'discount_acc_id': order.discount_acc_id.id,
+#                           'discount': order.discount,
+#                           'round_off_amount': order.amount_round_off
                         }
         invoice = inv_obj.create(invoice_values)
         invoice.compute_taxes()

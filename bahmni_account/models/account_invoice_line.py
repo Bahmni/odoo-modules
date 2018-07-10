@@ -28,7 +28,6 @@ class AccountInvoiceLine(models.Model):
                     price_unit = price_unit * (1 - vals['discount']/100)
                 amount_untaxed += price_unit
                 tax_ids = []
-                print "vals['invoice_line_tax_ids'][0]", vals['invoice_line_tax_ids'][0]
                 if len(vals['invoice_line_tax_ids'][0]) == 3:
                     tax_ids = vals['invoice_line_tax_ids'][0][2]
                 elif len(vals['invoice_line_tax_ids'][0]) == 1:

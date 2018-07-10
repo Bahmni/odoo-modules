@@ -7,7 +7,8 @@ class AccountInvoice(models.Model):
 
 #     # overridden this method to deduct discounted amount from total of invoice
     @api.one
-    @api.depends('invoice_line_ids.price_subtotal', 'tax_line_ids.amount', 'currency_id', 'company_id', 'date_invoice', 'type')
+    @api.depends('invoice_line_ids.price_subtotal', 'tax_line_ids.amount', 
+                 'currency_id', 'company_id', 'date_invoice', 'type', 'discount')
     def _compute_amount(self):
         round_curr = self.currency_id.round
         self.amount_untaxed = sum(line.price_subtotal for line in self.invoice_line_ids)
@@ -46,9 +47,9 @@ class AccountInvoice(models.Model):
                 discount = (amount_total * self.discount_percentage) / 100
                 self.discount = discount
 
-    @api.onchange('discount_type')
-    def onchange_discount_type(self):
-        '''Method to set values of fields to zero, when
-        those are  not considerable in calculation'''
-        self.discount_percentage = 0
-        self.discount = 0
+#     @api.onchange('discount_type')
+#     def onchange_discount_type(self):
+#         '''Method to set values of fields to zero, when
+#         those are  not considerable in calculation'''
+#         self.discount_percentage = 0
+#         self.discount = 0

@@ -54,7 +54,8 @@
 						<label for="disc_acc_id"  name="remove_display_prop"/> 
 					</div>
 					<div class="col-xs-6 footer_field" attrs="{'invisible': [('discount_type', '=', 'none')]}">
-						 <field name="disc_acc_id"  />
+						 <field name="disc_acc_id" 
+						 attrs="{'required': [('discount_type', 'in', ('fixed', 'percentage'))]}"/>
 					</div>
 					<group style="width: 100%; border-top: 1px solid #cacaca;
 								font-weight: bold; white-space:nowrap;">
@@ -80,7 +81,7 @@
 		<field eval="False" name="view_id"/>
 		<field name="domain">[('type','in',('out_invoice', 'out_refund'))]</field>
 		<field name="context">{'type':'out_invoice', 'journal_type': 'sale', 
-								'readonly_by_pass': ['discount']}
+								'readonly_by_pass': True}
 		</field>
 		<field name="search_view_id" ref="account.view_account_invoice_filter"/>
 		<field name="help" type="html">
