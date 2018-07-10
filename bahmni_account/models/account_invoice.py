@@ -39,17 +39,18 @@ class AccountInvoice(models.Model):
     round_off_amount = fields.Monetary(string="Round Off Amount",
                                        compute=_compute_amount)
 
-    @api.onchange('discount_percentage', 'invoice_line_ids')
-    def onchange_discount_percentage(self):
-        if self.discount_percentage:
-            amount_total = self.amount_untaxed + self.amount_tax
-            if self.discount_type == 'percentage':
-                discount = (amount_total * self.discount_percentage) / 100
-                self.discount = discount
+    @api.onchange('invoice_line_ids')
+    def onchange_invoice_lines(self):
+        amount_total = self.amount_untaxed + self.amount_tax
+        if self.disocunt_type == 'fixed':
+            self.discount_percentage = (self.discount / amount_total) * 100
+        elif self.discount_type == 'percentage':
+            self.discount = amount_total * self.discount_percentage / 100
 
-#     @api.onchange('discount_type')
-#     def onchange_discount_type(self):
-#         '''Method to set values of fields to zero, when
-#         those are  not considerable in calculation'''
-#         self.discount_percentage = 0
-#         self.discount = 0
+    @api.onchange('discount', 'discount_percentage', 'discount_type')
+    def onchange_discount(self):
+        amount_total = self.amount_untaxed + self.amount_tax
+        if self.discount:
+            self.discount_percentage = (self.discount / amount_total) * 100
+        if self.discount_percentage:
+            self.discount = amount_total * self.discount_percentage / 100

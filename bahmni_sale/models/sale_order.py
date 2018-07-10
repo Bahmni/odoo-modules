@@ -97,31 +97,28 @@ class SaleOrder(models.Model):
     # location to identify from which location order is placed.
     location_id = fields.Many2one('stock.location', string="Location")
 
-    @api.onchange('discount_percentage', 'order_line')
-    def onchange_discount_percentage(self):
+    @api.onchange('order_line')
+    def onchange_order_line(self):
         '''Calculate discount amount, when discount is entered in terms of %'''
         amount_total = self.amount_untaxed + self.amount_tax
-        if self.discount_percentage:
-            self.discount = (amount_total * self.discount_percentage / 100)
+        if self.discount_type == 'fixed':
+            self.discount_percentage = self.discount/amount_total * 100
+        elif self.discount_type == 'percentage':
+            self.discount = amount_total * self.discount_percentage / 100
 
-    @api.onchange('discount')
+    @api.onchange('discount', 'discount_percentage', 'discount_type', 'chargeable_amount')
     def onchange_discount(self):
         amount_total = self.amount_untaxed + self.amount_tax
-        if self.discount and self.discount_type == 'percentage':
-            self.discount_percentage = (self.discount / amount_total) * 100
-
-    @api.onchange('chargeable_amount')
-    def onchange_chargeable_amount(self):
-        # when chargeable amount is set less than total_amount, remaining amount is converted as discount
-        amount_total = self.amount_untaxed + self.amount_tax
-        if self.chargeable_amount > 0.0:
+        if self.chargeable_amount:
             if self.discount_type == 'none' and self.chargeable_amount:
                 self.discount_type = 'fixed'
                 discount = amount_total - self.chargeable_amount
                 self.discount_percentage = (discount / amount_total) * 100
-            elif self.discount_type == 'fixed' or self.discount_type == 'percentage':
-                discount = amount_total - self.chargeable_amount
-                self.discount_percentage = (discount / self.amount_total) * 100
+        else:
+            if self.discount:
+                self.discount_percentage = (self.discount / amount_total) * 100
+            if self.discount_percentage:
+                self.discount = amount_total * self.discount_percentage / 100
 
     @api.model
     def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
