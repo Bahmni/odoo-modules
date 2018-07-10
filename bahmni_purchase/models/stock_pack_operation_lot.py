@@ -15,7 +15,8 @@ class StockPackOperationLot(models.Model):
         if operation_id:
             pack_operation = self.env['stock.pack.operation'].browse(operation_id)
             pack_lot_ids = ctx.get('pack_lot_ids')
-            assigned_moves = [x[2].get('move_id') for x in pack_lot_ids]
+            print ">>>>>>>", pack_lot_ids
+            assigned_moves = [x[2].get('move_id') for x in pack_lot_ids if x[2]]
             mv_op_link_ids = self.env['stock.move.operation.link'].search([('operation_id', '=', operation_id),
                                                                            ('move_id', 'not in', assigned_moves)],
                                                                           order='id asc')
@@ -38,21 +39,8 @@ class StockPackOperationLot(models.Model):
                                                                        '|', ('higher_price', '>=', cost_price),
                                                                        ('higher_price', '=', 0)])
             if markup_table_line and len(markup_table_line)==1:
-                res.update({'sale_price':cost_price + (cost_price * markup_table_line.markup_percentage / 100)})
+                res.update({'sale_price': cost_price + (cost_price * markup_table_line.markup_percentage / 100)})
         return res
-
-#     @api.model
-#     def _get_default_sale_price(self):
-#         print "self.context:::::::", self._context
-#         # move_id can be fetched from stock.move.operation.link
-# #         mv_op_link_ids = self.env['stock.move.operation.link'].search([('operation_id', '=', self._origin.operation_id.id)])
-# #         print "mv_op_link_ids :::::::::::::::::", mv_op_link_ids
-# #         print "self.pack_lot_ids ::::::::::::::", self._origin.operation_id.pack_lot_ids
-# #         cost_prices_alloted = [x.cost_price for x in self._origin.operation_id.pack_lot_ids]
-# #         print "cost_prices_alloted ::::::::::::", cost_prices_alloted
-# #         for link in mv_op_link_ids:
-# #             print "move_id::::::::::::", link.move_id
-#         return 0.0
 
     sale_price = fields.Float(string="Sale Price", digits=dp.get_precision('Product Price'))
     cost_price = fields.Float(string="Cost Price", digits=dp.get_precision('Product Price'))

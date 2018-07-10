@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
+from datetime import datetime, date
+from lxml import etree
 
 from odoo import fields, models, api, _
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DSDF
 from odoo.tools import float_is_zero
 from odoo.exceptions import UserError
+from odoo.osv.orm import setup_modifiers
+from odoo.tools import pickle
 
 
 class SaleOrder(models.Model):
     _inherit = 'sale.order'
-
+    
     @api.depends('order_line.price_total', 'discount', 'chargeable_amount')
     def _amount_all(self):
         """
@@ -46,12 +49,8 @@ class SaleOrder(models.Model):
         for order in self:
             order.prev_outstanding_balance = 0.0
             order.total_outstanding_balance = 0.0
-#             res[order.id] = {'prev_amount_outstanding':0.0,'total_outstanding':0.0}
             total_receivable = order._total_receivable()
             order.prev_outstanding_balance = total_receivable
-#             order.total_outstanding_balance = order.amount_total + total_receivable
-#             res[order.id]['prev_amount_outstanding'] = total_receivable
-#             res[order.id]['total_outstanding'] = total_receivable + order.amount_total
 
     def _total_receivable(self):
         receivable = 0.0
@@ -95,43 +94,52 @@ class SaleOrder(models.Model):
                                                 compute=_amount_all)
     chargeable_amount = fields.Float(string="Chargeable Amount")
     amount_round_off = fields.Float(string="Round Off Amount")
+    # location to identify from which location order is placed.
+    location_id = fields.Many2one('stock.location', string="Location")
 
     @api.onchange('discount_percentage', 'order_line')
     def onchange_discount_percentage(self):
         '''Calculate discount amount, when discount is entered in terms of %'''
-        print "onchange_discount_percentage :::::::::", self.discount_percentage
         amount_total = self.amount_untaxed + self.amount_tax
-        if self.discount_type == 'percentage':
-            self.discount = (amount_total * self.discount_percentage) / 100
-            print "self.discount >>>>>>>>>>>>>>>>>", self.discount
-
-    @api.onchange('discount_type')
-    def onchange_discount_type(self):
-        '''Method to set values of fields to zero, when
-        those are  not considerable in calculation'''
-        print "onchange_discount_type :::::::::::::::::", self.discount_type
-        if self.chargeable_amount and self.chargeable_amount <= self.amount_total:
-            if self.discount_type == 'fixed':
-                print ">>>>>>>>>>>>>>>>>>>>", (self.discount / self.amount_total ) * 100
-#                 self.discount = self.amount_untaxed + self.amount_tax - self.chargeable_amount
-                self.discount_percentage = (self.discount / self.amount_total) * 100
-            elif self.discount_type == 'percentage':
-                discount = self.amount_total + self.amount_tax - self.chargeable_amount
-                self.discount_percentage = (discount / self.amount_total) * 100
+        if self.chargeable_amount:
+            self.discount = amount_total - self.chargeable_amount
+        elif self.discount_percentage:
+            self.discount = amount_total * self.discount_percentage / 100
+        elif amount_total:
+            self.discount_percentage = (self.discount/ amount_total) * 100
 
     @api.onchange('chargeable_amount')
     def onchange_chargeable_amount(self):
         # when chargeable amount is set less than total_amount, remaining amount is converted as discount
+        amount_total = self.amount_untaxed + self.amount_tax
         if self.chargeable_amount > 0.0:
             if self.discount_type == 'none' and self.chargeable_amount:
                 self.discount_type = 'fixed'
-            elif self.discount_type == 'fixed':
-                self.discount = self.amount_untaxed + self.amount_tax - self.chargeable_amount
-                print "sself.discount:::::::onchange_chargeable_amount>>>>>>>>>>>>>>", self.discount 
-                self.discount_percentage = (self.discount / self.amount_total) * 100
-            elif self.discount_type == 'percentage':
-                discount = self.amount_untaxed + self.amount_tax - self.chargeable_amount
+                discount = amount_total - self.chargeable_amount
+                self.discount_percentage = (discount / amount_total) * 100
+            elif self.discount_type == 'fixed' or self.discount_type == 'percentage':
+                discount = amount_total - self.chargeable_amount
                 self.discount_percentage = (discount / self.amount_total) * 100
+
+    @api.model
+    def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
+        '''1. make percentage and discount field readonly, when chargeable amount is allowed to enter'''
+        result = super(SaleOrder, self).fields_view_get(view_id, view_type, toolbar=toolbar, submenu=submenu)
+        if view_type == 'form':
+            group_id = self.env.ref("bahmni_sale.group_allow_change_so_charge").id
+            doc = etree.XML(result['arch'])
+            if group_id in self.env.user.groups_id.ids:
+                for node in doc.xpath("//field[@name='discount_percentage']"):
+                    node.set('readonly', '1')
+                    setup_modifiers(node, result['fields']['discount_percentage'])
+                for node in doc.xpath("//field[@name='discount']"):
+                    node.set('readonly', '1')
+                    setup_modifiers(node, result['fields']['discount'])
+                for node in doc.xpath("//field[@name='discount_type']"):
+                    node.set('readonly', '1')
+                    setup_modifiers(node, result['fields']['discount_type'])
+            result['arch'] = etree.tostring(doc)
+        return result
 
     @api.multi
     def _prepare_invoice(self):
@@ -164,3 +172,57 @@ class SaleOrder(models.Model):
             'disc_acc_id': self.disc_acc_id.id
         }
         return invoice_vals
+
+    @api.model
+    def create(self, vals):
+        '''Inherited this method to directly convert quotation to sale order, when it is dispensed at location'''
+        res = super(SaleOrder, self).create(vals)
+        auto_convert_set = pickle.loads(self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
+                                                                      ('name', '=', 'convert_dispensed')]).value.encode('utf-8'))
+        if auto_convert_set and vals.get('dispensed'):
+            res.action_confirm()
+            pickings = self.env['stock.picking'].search([('group_id', '=', res.procurement_group_id.id)]) if res.procurement_group_id else []
+            for pick in pickings:
+                for ln in pick.pack_operation_product_ids:
+                    # unlinked already populated lot_ids, as in bahmni according to expiry_date assignment is imp.
+                    for l in ln.pack_lot_ids:
+                        l.unlink()
+                    required_qty = ln.product_qty
+                    if ln.product_id.tracking != 'none':
+                        pack_lot_ids = []
+                        alloted_lot_ids = []
+                        while required_qty != 0:
+                            lot_id = self.env['stock.production.lot'].search([('product_id', '=', ln.product_id.id),
+                                                                              ('life_date', '>', datetime.combine(date.today(), datetime.min.time()).strftime(DSDF)),
+                                                                              ('id', 'not in', alloted_lot_ids)],
+                                                                             order='life_date', limit=1)
+                            if not lot_id:
+                                lot_id = self.env['stock.production.lot'].search([('product_id', '=', ln.product_id.id),
+                                                                         ('id', 'not in', alloted_lot_ids)],
+                                                                        limit=1, order='id')
+                            if lot_id:
+                                quant_id = self.env['stock.quant'].search([('lot_id', '=', lot_id.id),
+                                                                            ('location_id', '=', ln.location_id.id),
+                                                                            ('product_id', '=', ln.product_id.id)])
+                                if len(quant_id) == 1:
+                                    available_qty = quant_id.qty
+                                else:
+                                    available_qty = sum([x.qty for x in quant_id])
+                                if available_qty <= required_qty:
+                                    pack_lot_ids.append((0, 0, {'lot_id': lot_id.id,
+                                                                'qty': available_qty,
+                                                                'qty_todo': available_qty}))
+                                    required_qty = required_qty - available_qty
+                                    alloted_lot_ids.append(lot_id.id)
+                                elif available_qty > required_qty:
+                                    pack_lot_ids.append((0, 0, {'lot_id': lot_id.id,
+                                                                'qty': required_qty,
+                                                                'qty_todo': required_qty}))
+                                    required_qty = 0
+                                    alloted_lot_ids.append(lot_id.id)
+                        ln.pack_lot_ids = pack_lot_ids
+                        ln.qty_done = ln.product_qty
+                pick.do_new_transfer()
+        return res
+    
+    

@@ -11,3 +11,5 @@ class SaleOrderLine(models.Model):
                                     help="This field stores the order ID got from api call.")
     order_uuid = fields.Char(string="Order UUID",
                              help="Field for generating a random unique ID.")
+    dispensed = fields.Boolean(string="Dispensed",
+                               help="Flag to identify whether drug order is dispensed or not.")

@@ -174,7 +174,7 @@ class ProductTemplate(models.Model):
     actual_stock = fields.Integer(string="Actual Stock", compute=_compute_quantities,
                                   help="Get the actual stock available for product."
                                   "\nActual stock of product doesn't eliminates the count of expired lots from available quantities.")
-    dhis_code = fields.Char(string="DHIS Code")
+    dhis2_code = fields.Char(string="DHIS2 Code")
 
     @api.multi
     def action_open_quants(self):

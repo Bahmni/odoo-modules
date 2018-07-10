@@ -3,7 +3,7 @@
 <!--inherited form view of product_template to add a button for viewing 
 actual_stock for a product and quants related to it.-->
 	<record id="inherit_product_template_form_view_procurement_button" model="ir.ui.view">
-		<field name="name">inherit.product.form.view.procurement.button</field>
+		<field name="name">inherit.product.template.form.view.procurement.button</field>
 		<field name="model">product.template</field>
 		<field name="inherit_id" ref="stock.product_template_form_view_procurement_button"/>
 		<field name="arch" type="xml">
@@ -44,7 +44,7 @@ actual_stock for a product and quants related to it.-->
 	
 <!--inherited product_product form view, to view Actual stock available and an action to see the quants related to it.-->
 	<record id="inherit_product_form_view_procurement_button" model="ir.ui.view">
-		<field name="name">inherit.product.form.view.procurement</field>
+		<field name="name">inherit.product.form.view.procurement.button</field>
 		<field name="model">product.product</field>
 		<field name="inherit_id" ref="stock.product_form_view_procurement_button"/>
 		<field name="arch" type="xml">
@@ -73,7 +73,7 @@ actual_stock for a product and quants related to it.-->
 			<xpath expr="//field[@name='categ_id']" position="after">
 				<field name="drug"/>
 				<field name="manufacturer"/>
-				<field name="dhis_code"/>
+				<field name="dhis2_code"/>
 			</xpath>
 		</field>
 	</record>

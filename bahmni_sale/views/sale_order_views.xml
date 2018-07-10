@@ -11,6 +11,9 @@
 				<field name="care_setting" />
 				<field name="provider_name"/>
 			</xpath>
+			<xpath expr="//field[@name='client_order_ref']" position="after">
+				<field name="dispensed"/>
+			</xpath>
 			<xpath expr="//notebook/page[1]/group" position="replace">
 				<div class="col-xs-5 pull-right text-right" style="padding-right:0px">
 					<div class="col-xs-6 footer_label" style="min-height: 28px;">
@@ -52,12 +55,14 @@
 					</div> <!-- readonly bypass added to save the field even if it is in readonly state -->
 					
 					<div class="col-xs-6 footer_label" style="min-height: 28px;"
-						attrs="{'invisible': [('discount_type', '=', 'none')]}">
+						attrs="{'invisible': ['|', ('discount_type', '=', 'none'),
+												('discount', '=', 0.0)]}">
 						<label for="disc_acc_id" /> 
 					</div>
 					<div class="col-xs-6 footer_field" style="min-height: 28px;"
-						attrs="{'invisible': [('discount_type', '=', 'none')]}">
-						 <field name="disc_acc_id"  />
+						attrs="{'invisible': ['|', ('discount_type', '=', 'none'),
+													('discount', '=', 0.0)]}">
+						 <field name="disc_acc_id"  attrs="{'required': [('discount', '!=', 0.0)]}"/>
 					</div>
 					<div class="col-xs-6 footer_label" style="min-height: 28px;">
 						<label for="round_off_amount"  /> 
@@ -65,10 +70,12 @@
 					<div class="col-xs-6 footer_field" style="min-height: 28px;">
 						 <field name="round_off_amount"  />
 					</div>
-					<div class="col-xs-6 footer_label" style="min-height: 28px;">
+					<div class="col-xs-6 footer_label" 
+						style="min-height: 28px;" groups="bahmni_sale.group_allow_change_so_charge">
 						<label for="chargeable_amount"  /> 
 					</div>
-					<div class="col-xs-6 footer_field" style="min-height: 28px;">
+					<div class="col-xs-6 footer_field" 
+						style="min-height: 28px;" groups="bahmni_sale.group_allow_change_so_charge" >
 						 <field name="chargeable_amount"  />
 					</div>
 					<div class="col-xs-6 footer_label" style="min-height: 28px;">

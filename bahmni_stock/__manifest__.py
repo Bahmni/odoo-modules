@@ -12,8 +12,9 @@ Bahmni Purchase
     'website': '',
     'images': [],
     'depends': ['stock', 'bahmni_product', 'bahmni_account'],
-    'data': ['views/purchase_views.xml',
-             'views/product_view.xml',
+    'data': ['views/stock_production_lot_view.xml',
+#              'report/batch_stock_future_forecast_view.xml',
+#              'security/ir.model.access.csv'
              ],
     'demo': [],
     'qweb': [],

@@ -6,12 +6,20 @@
 		<field name="model">sale.config.settings</field>
 		<field name="inherit_id" ref="sale.view_sales_config"/>
 		<field name="arch" type="xml">
-			<xpath expr="//div[@id='main']" position="inside">
-				<group string="Sales Features" name="sales_features">
-					<label for="group_final_so_charge" style="white-space:nowrap;"/><field name="group_final_so_charge" nolabel="1"/>
-					<label for="group_default_quantity"/>
-					<field name="group_default_quantity" nolabel="1"/>
-				</group>
+			<xpath expr="//group[@name='quotations_sales']" position="inside">
+				<label string="Sales Features"/>
+                <div name="bahmni_sale_feature">
+                    <field name="group_final_so_charge" class="oe_inline" />
+                    <label for="group_final_so_charge"/>
+                    <br/>
+                    <field name="group_default_quantity" class="oe_inline" />
+                    <label for="group_default_quantity"/>
+                    <br/>
+                    <field name="convert_dispensed" class="oe_inline" />
+                    <label for="convert_dispensed"/>
+                    
+                </div>
+<!--                <field name="auto_convert_dispensed" widget="radio"/-->
 			</xpath>
 		</field>
 	</record>
