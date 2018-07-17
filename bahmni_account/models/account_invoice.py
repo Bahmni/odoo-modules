@@ -42,7 +42,7 @@ class AccountInvoice(models.Model):
     @api.onchange('invoice_line_ids')
     def onchange_invoice_lines(self):
         amount_total = self.amount_untaxed + self.amount_tax
-        if self.disocunt_type == 'fixed':
+        if self.discount_type == 'fixed':
             self.discount_percentage = (self.discount / amount_total) * 100
         elif self.discount_type == 'percentage':
             self.discount = amount_total * self.discount_percentage / 100
