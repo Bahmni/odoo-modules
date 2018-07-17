@@ -14,7 +14,8 @@ Bahmni Purchase
     'depends': ['stock', 'bahmni_product', 'bahmni_account'],
     'data': ['views/stock_production_lot_view.xml',
              'report/batch_stock_future_forecast_view.xml',
-            'security/ir.model.access.csv'
+             'report/stock_report_prod_by_last_moved.xml',
+             'security/ir.model.access.csv'
              ],
     'demo': [],
     'qweb': [],

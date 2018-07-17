@@ -4,7 +4,7 @@
 		<field name="name">tree.batch.stock.future.forecast</field>
 		<field name="model">batch.stock.future.forecast</field>
 		<field name="arch" type="xml">
-			<tree string="Stock Batch Future Forecast">
+			<tree create="0" string="Stock Batch Future Forecast">
 				<field name="product_id"/>
 				<field name="qty"/>
 				<field name="lot_id"/>

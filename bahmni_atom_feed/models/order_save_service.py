@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
 import json
 from itertools import groupby
 import logging
 
 from odoo import fields, models, api
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
+from odoo.exceptions import Warning
 
 _logger = logging.getLogger(__name__)
 
@@ -18,6 +21,32 @@ class OrderSaveService(models.Model):
         orders_string = vals.get("orders")
         order_group = json.loads(orders_string)
         return order_group.get('openERPOrders', None)
+    
+    @api.model
+    def _get_warehouse_id(self, location, orderType):
+        if location:
+            order_type = self.env[('name', '=like', orderType)]
+            operation_types = self.env['stock.picking.type'].search([('default_location_src_id', '=', location.id)])
+            if order_type and operation_types:
+                mapping = self.env['order.picking.type.mapping'].search([('order_type_id', '=', order_type.id),
+                                                                         ('picking_type_id', 'in', operation_types.ids)],
+                                                                        limit=1)
+                if mapping:
+                    warehouse = mapping.picking_type_id.warehouse_id
+            elif not order_type and operation_types:
+                operation_type = self.env['stock.picking.type'].search([('default_location_src_id', '=', location.id)],
+                                                                        limit=1)
+                warehouse = operation_type.warehouse_id
+            else:
+                # either location should exist as stock location of a warehouse.
+                warehouse = self.env['stock.warehouse'].search([('lot_stock_id', '=', location.id)])
+                if not warehouse:
+                    _logger.warning("Location is neither mapped to warehouse nor to any Operation type, hence sale order creation failed!")
+                    return
+                else:
+                    return warehouse.id
+        else:
+            _logger.warning("Location with name '%s' does not exists in the system")
 
     @api.model
     def create_orders(self, vals):
@@ -37,31 +66,14 @@ class OrderSaveService(models.Model):
                 orders = list(ordersGroup)
                 care_setting = orders[0].get('visitType').lower()
                 provider_name = orders[0].get('providerName')
+                # will return order line data for products which exists in the system, either with productID passed or with conceptName
                 unprocessed_orders = self._filter_processed_orders(orders)
-# 
-#                 tup = self._get_shop_and_local_shop_id(cr, uid, orderType, location_name, context)
-#                 shop_id = tup[0]
-#                 local_shop_id = tup[1]
+
                 # instead of shop_id, warehouse_id is needed.
                 location = self.env['stock.location'].search([('name', '=ilike', location_name)], limit=1)
                 if not location:
                     _logger.warning("No location found with name: %s"%(location_name))
-
-                if location:
-                    # either location should exist as stock location of a warehouse.
-                    warehouse = self.env['stock.warehouse'].search([('lot_stock_id', '=', location.id)])
-                    if not warehouse:
-                        # or it should be a child location of stock location of main warehouse in case of single warehouse system.
-                        # in this case, child location has to be mapped in a operation type.
-                        operation_type = self.env['stock.picking.type'].search([('default_location_src_id', '=', location.id)],
-                                                                               limit=1)
-                        if operation_type:
-                            warehouse = operation_type.warehouse_id
-                    if not warehouse:
-                        _logger.warning("Location is neither mapped to warehouse nor to any Operation type, hence sale order creation failed!")
-                        return
-#                 if(not shop_id):
-#                     continue
+                warehouse_id = self._get_warehouse_id(location, orderType)
 
                 name = self.env['ir.sequence'].next_by_code('sale.order')
                 #Adding both the ids to the unprocessed array of orders, Separating to dispensed and non-dispensed orders
@@ -69,42 +81,70 @@ class OrderSaveService(models.Model):
                 unprocessed_non_dispensed_order = []
                 for unprocessed_order in unprocessed_orders:
                     unprocessed_order['location_id'] = location.id
-                    unprocessed_order['warehouse_id'] = warehouse.id
+                    unprocessed_order['warehouse_id'] = warehouse_id
                     if(unprocessed_order.get('dispensed', 'false') == 'true'):
                         unprocessed_dispensed_order.append(unprocessed_order)
                     else:
                         unprocessed_non_dispensed_order.append(unprocessed_order)
 
                 if(len(unprocessed_non_dispensed_order) > 0):
-                    sale_order_ids = self.env['sale.order'].search([('partner_id', '=', cus_id),
+                    sale_order_ids = self.env['sale.order'].search([('partner_id', '=', cus_id.id),
                                                                     ('location_id', '=', unprocessed_non_dispensed_order[0]['location_id']),
                                                                     ('state', '=', 'draft'),
                                                                     ('origin', '=', 'ATOMFEED SYNC')])
 
                     if(not sale_order_ids):
-                        #Non Dispensed New
-                        self._create_sale_order(cus_id, name, unprocessed_non_dispensed_order[0]['location_id'], unprocessed_non_dispensed_order, care_setting, provider_name)
+                        # Non Dispensed New
+                        # replaced create_sale_order method call
+                        sale_order_vals = {'partner_id': cus_id.id,
+                                           'location_id': unprocessed_non_dispensed_order[0]['location_id'],
+                                           'warehouse_id': unprocessed_non_dispensed_order[0]['warehouse_id'],
+                                           'care_setting': care_setting,
+                                           'provider_name': provider_name,
+                                           'date_order': datetime.strftime(datetime.now(), DTF),
+                                           'pricelist_id': cus_id.property_product_pricelist and cus_id.property_product_pricelist.id or False,
+                                           'picking_policy': 'direct',
+                                           'state': 'draft',
+                                           }
+                        sale_order = self.env['sale.order'].create(sale_order_vals)
+                        for rec in unprocessed_non_dispensed_order:
+                            self._process_orders(sale_order, unprocessed_non_dispensed_order, rec)
                     else:
-                        #Non Dispensed Update
-                        self._update_sale_order(cus_id, name, unprocessed_non_dispensed_order[0]['location_id'], care_setting, sale_order_ids[0], unprocessed_non_dispensed_order, provider_name, context)
+                        # Non Dispensed Update
+                        # replaced update_sale_order method call
+                        for order in sale_order_ids:
+                            order.write({'care_setting': care_setting,
+                                         'provider_name': provider_name})
+                            if order.state != 'draft':
+                                _logger.error("Sale order for patient : %s is already approved"%(cus_id.name))
+                            else:
+                                for rec in unprocessed_non_dispensed_order:
+                                    self._process_orders(order, unprocessed_non_dispensed_order, rec)
 
-                    sale_order_ids_for_dispensed = self.pool.get('sale.order').search(cr, uid, [('partner_id', '=', cus_id), ('shop_id', '=', unprocessed_non_dispensed_order[0]['custom_local_shop_id']), ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')], context=context)
+                    sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id),
+                                                                                  ('location_id', '=', unprocessed_non_dispensed_order[0]['location_id']),
+                                                                                  ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')])
 
                     if(len(sale_order_ids_for_dispensed) > 0):
-                        if(sale_order_ids_for_dispensed[0]) :
-                            sale_order_line_ids_for_dispensed = self.pool.get('sale.order.line').search(cr, uid, [('order_id', '=', sale_order_ids_for_dispensed[0])], context=context)
-                            if(len(sale_order_line_ids_for_dispensed) == 0):
-                                self.pool.get('sale.order').unlink(cr, uid, sale_order_ids_for_dispensed, context=context)
+                        if(sale_order_ids_for_dispensed[0]):
+                            sale_order_line_ids_for_dispensed = self.env['sale.order.line'].search([('order_id', '=', sale_order_ids_for_dispensed[0])])
+                            if(len(sale_order_line_ids_for_dispensed) != 0):
+                                for so_ids in sale_order_line_ids_for_dispensed:
+                                    so_ids.unlink()
 
 
-                if(len(unprocessed_dispensed_order) > 0 and local_shop_id) :
-                    sale_order_ids = self.pool.get('sale.order').search(cr, uid, [('partner_id', '=', cus_id), ('shop_id', '=', unprocessed_dispensed_order[0]['custom_shop_id']), ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')], context=context)
+                if(len(unprocessed_dispensed_order) > 0 and location) :
+                    sale_order_ids = self.env['sale.order'].search([('partner_id', '=', cus_id),
+                                                                    ('location_id', '=', unprocessed_dispensed_order[0]['location_id']),
+                                                                    ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')])
 
-                    sale_order_ids_for_dispensed = self.pool.get('sale.order').search(cr, uid, [('partner_id', '=', cus_id), ('shop_id', '=', unprocessed_dispensed_order[0]['custom_local_shop_id']), ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')], context=context)
+                    sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id),
+                                                                                  ('location_id', '=', unprocessed_dispensed_order[0]['location_id']),
+                                                                                  ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')])
 
                     if(not sale_order_ids_for_dispensed):
                         #Remove existing sale order line
-                        self._remove_existing_sale_order_line(cr,uid,sale_order_ids[0],unprocessed_dispensed_order,context=context)
+                        self._remove_existing_sale_order_line(sale_order_ids[0],unprocessed_dispensed_order)
 
                         #Removing existing empty sale order
                         sale_order_line_ids = self.pool.get('sale.order.line').search(cr, uid, [('order_id', '=', sale_order_ids[0])], context=context)
@@ -134,6 +174,132 @@ class OrderSaveService(models.Model):
             raise osv.except_osv(('Error!'), ("Patient Id not found in openerp"))
 
     @api.model
+    def _remove_existing_sale_order_line(self, sale_order_id, unprocessed_dispensed_order):
+        sale_order_lines = self.env['sale.order.line'].search([('order_id', '=', sale_order_id)])
+        sale_order_lines_to_be_saved = []
+        for order in unprocessed_dispensed_order:
+            for sale_order_line in sale_order_lines:
+                if(order['orderId'] == sale_order_line.external_order_id):
+                    if order.get('dispensed')=='false':
+                        dispensed_status = False
+                    else:
+                        dispensed_status = True
+                    if(dispensed_status != sale_order_line.dispensed_status):
+                        sale_order_lines_to_be_saved.append(sale_order_line)
+
+        for rec in sale_order_lines_to_be_saved:
+            rec.unlink()
+        
+    @api.model
+    def _process_orders(self, sale_order, all_orders, order):
+
+        order_in_db = self.env['sale.order.line'].search([('external_order_id', '=', order['orderId'])])
+
+        if(order_in_db or self._order_already_processed(order['orderId'], order.get('dispensed', False))):
+            return
+
+        parent_order_line = []
+        # if(order.get('previousOrderId', False) and order.get('dispensed', "") == "true"):
+        #     self._create_sale_order_line(cr, uid, name, sale_order, order, context)
+
+        if(order.get('previousOrderId', False) and order.get('dispensed', "") == "false"):
+            parent_order = self._fetch_parent(all_orders, order)
+            if(parent_order):
+                self._process_orders(sale_order, all_orders, parent_order, context=None)
+            parent_order_line = self.env['sale.order.line'].search([('external_order_id', '=', order['previousOrderId'])])
+            if(not parent_order_line and not self._order_already_processed(order['previousOrderId'], order.get('dispensed', False))):
+                raise Warning("Previous order id does not exist in DB. This can be because of previous failed events")
+
+        if(order["voided"] or order.get('action', "") == "DISCONTINUE"):
+            self._delete_sale_order_line(parent_order_line)
+        elif(order.get('action', "") == "REVISE" and order.get('dispensed', "") == "false"):
+            self._update_sale_order_line(sale_order.id, order, parent_order_line)
+        else:
+            self._create_sale_order_line(sale_order.id, order)
+    
+    @api.model
+    def _delete_sale_order_line(self, parent_order_line):
+        if(parent_order_line):
+            if(parent_order_line[0] and parent_order_line[0].order_id.state == 'draft'):
+                for parent in parent_order_line:
+                    parent.unlink()
+    
+    @api.model
+    def _update_sale_order_line(self, sale_order, order, parent_order_line):
+        self._delete_sale_order_line(parent_order_line)
+        self._create_sale_order_line(sale_order, order)
+    
+    @api.model
+    def _create_sale_order_line(self, sale_order, order):
+        if(self._order_already_processed(order['orderId'],order.get('dispensed', False))):
+            return
+        self._create_sale_order_line_function(sale_order, order)
+        
+    @api.model
+    def _get_order_quantity(self, order, default_quantity_value):
+        if(not self.env['syncable.units'].search([('name', '=', order['quantityUnits'])])):
+            return default_quantity_value
+        return order['quantity']
+    
+    @api.model
+    def _create_sale_order_line_function(self, sale_order, order):
+        stored_prod_ids = self._get_product_ids(order)
+
+        if(stored_prod_ids):
+            prod_id = stored_prod_ids[0]
+            prod_obj = self.env['product.product'].browse(prod_id)
+            sale_order_line_obj = self.env['sale.order.line']
+            prod_lot = sale_order_line_obj.get_available_batch_details(prod_id, sale_order)
+
+            actual_quantity = order['quantity']
+            comments = " ".join([str(actual_quantity), str(order.get('quantityUnits', None))])
+
+            default_quantity_total = self.env.ref('bahmni_sale_discount', 'group_default_quantity')
+            default_quantity_value = 1
+            if default_quantity_total and len(default_quantity_total.users) > 0:
+                default_quantity_value = -1
+
+            order['quantity'] = self._get_order_quantity(order, default_quantity_value)
+            product_uom_qty = order['quantity']
+            if(prod_lot != None and order['quantity'] > prod_lot.future_stock_forecast):
+                product_uom_qty = prod_lot.future_stock_forecast
+
+            sale_order_line = {
+                'product_id': prod_id,
+                'price_unit': prod_obj.list_price,
+                'comments': comments,
+                'product_uom_qty': product_uom_qty,
+                'product_uom': prod_obj.uom_id.id,
+                'order_id': sale_order.id,
+                'external_id':order['encounterId'],
+                'external_order_id':order['orderId'],
+                'name': prod_obj.name,
+                'type': 'make_to_stock',
+                'state': 'draft',
+                'dispensed_status': order.get('dispensed', False)
+            }
+
+            if prod_lot != None:
+                life_date = prod_lot.life_date and datetime.strptime(prod_lot.life_date, DTF)
+                sale_order_line['price_unit'] = prod_lot.sale_price if prod_lot.sale_price > 0.0 else sale_order_line['price_unit']
+                sale_order_line['batch_name'] = prod_lot.name
+                sale_order_line['batch_id'] = prod_lot.id
+                sale_order_line['expiry_date'] = life_date and life_date.strftime('%d/%m/%Y')
+
+            sale_order_line_obj.create(sale_order_line)
+
+            sale_order = self.env['sale.order'].browse(sale_order.id)
+
+            if product_uom_qty != order['quantity']:
+                order['quantity'] = order['quantity'] - product_uom_qty
+                self._create_sale_order_line_function(sale_order, order)
+    
+    def _fetch_parent(self, all_orders, child_order):
+        for order in all_orders:
+            if(order.get("orderId") == child_order.get("previousOrderId")):
+                return order
+
+    @api.model
     def _filter_processed_orders(self, orders):
         unprocessed_orders = []
         dispensed_status = False
@@ -141,13 +307,15 @@ class OrderSaveService(models.Model):
         for order in orders:
             if order.get('dispensed') == 'true':
                 dispensed_status = True
+            else:
+                dispensed_status = False
             if (not self._order_already_processed(order['orderId'], dispensed_status)):
                 unprocessed_orders.append(order)
         return self._filter_products_undefined(unprocessed_orders)
 
     @api.model
-    def _order_already_processed(self, order_uuid, dispensed_status):
-        processed_drug_order_id = self.env['sale.order.line'].search([('external_order_id', '=', order_uuid), ('dispensed', '=', dispensed_status)])
+    def _order_already_processed(self, OrderID, Dstatus):
+        processed_drug_order_id = self.env['sale.order.line'].search([('external_order_id', '=', OrderID), ('dispensed', '=', Dstatus)])
         return processed_drug_order_id
 
     @api.model

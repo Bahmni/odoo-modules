@@ -24,20 +24,18 @@ class AtomEventWorker(models.Model):
             self.env['drug.service.create']._create_or_update_drug(vals)
         if(category == "create.sale.order"):
             self.env['order.save.service'].create_orders(vals)
-#         if(category == "create.drug"):
-#             self.pool.get('drug.service').create_or_update_drug(vals)
-#         if(category == "create.drug.category"):
-#             self.pool.get('drug.service').create_or_update_drug_category(vals)
-#         if(category == "create.drug.uom"):
-#             self.pool.get('product.uom.service').create_or_update_product_uom(vals)
-#         if(category == "create.drug.uom.category"):
-#             self.pool.get('product.uom.service').create_or_update_product_uom_category(vals)
-#         if(category == "create.radiology.test"):
-#             self.pool.get('radiology.test.service').create_or_update_reference_data(vals)
-#         if(category == "create.lab.test"):
-#             self.pool.get('lab.test.service').create_or_update_reference_data(vals)
-#         if(category == "create.lab.panel"):
-#             self.pool.get('lab.panel.service').create_or_update_reference_data(vals)
+        if (category == 'create.drug.category'):
+            self.env['drug.service.create']._create_or_update_drug_category(vals)
+        if (category == 'create.drug.uom'):
+            self.env['product.uom.service']._create_or_update_uom(vals)
+        if (category == 'create.drug.uom.category'):
+            self.env['product.uom.service']._create_or_update_uom_category(vals)
+        if(category == "create.radiology.test"):
+            self.env['drug.service.create']._create_or_update_service(vals, 'Radiology')
+        if(category == "create.lab.test"):
+            self.env['lab.test.service']._create_or_update_service(vals, 'Test')
+        if(category == "create.lab.panel"):
+            self.env['lab.panel.service']._create_or_update_service(vals, 'Panel')
 
         self._create_or_update_marker(vals)
         return {'success': True}

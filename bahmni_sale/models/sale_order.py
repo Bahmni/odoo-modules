@@ -77,7 +77,7 @@ class SaleOrder(models.Model):
     partner_village = fields.Many2one("village.village", string="Partner Village")
     care_setting = fields.Selection([('ipd', 'IPD'),
                                      ('opd', 'OPD')], string="Care Setting")
-    provider_name = fields.Many2one('res.partner', string="Provider Name")
+    provider_name = fields.Char(string="Provider Name")
     discount_percentage = fields.Float(string="Discount Percentage")
     default_quantity = fields.Integer(string="Default Quantity")
     # above field is used to allow setting quantity as -1 in sale order line, when it is created through bahmni
