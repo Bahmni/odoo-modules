@@ -45,6 +45,7 @@ class StockPackOperationLot(models.Model):
     cost_price = fields.Float(string="Cost Price", digits=dp.get_precision('Product Price'))
     mrp = fields.Float(string="MRP", digits=dp.get_precision('Product Price'))
     expiry_date = fields.Date(string="Expiry Date", digits=dp.get_precision('Product Price'))
-    move_id = fields.Many2one(string="Stock Move",
+    move_id = fields.Many2one('stock.move',
+                              string="Stock Move",
                               help="This field is used to track, which all move_ids are utilized to fetch cost_price")
 

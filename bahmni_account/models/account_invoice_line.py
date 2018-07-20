@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, api
-from docutils.nodes import Invisible
+from odoo import models, api, fields
 
 
 class AccountInvoiceLine(models.Model):

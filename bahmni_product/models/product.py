@@ -26,7 +26,7 @@ class ProductProduct(models.Model):
         dates_in_the_past = False
         if to_date and to_date < fields.Datetime.now(): #Only to_date as to_date will correspond to qty_available
             dates_in_the_past = True
-
+ 
         domain_move_in = [('product_id', 'in', self.ids)] + domain_move_in_loc
         domain_move_out = [('product_id', 'in', self.ids)] + domain_move_out_loc
         if lot_id:
@@ -37,9 +37,9 @@ class ProductProduct(models.Model):
             domain_move_out += [('restrict_partner_id', '=', owner_id)]
         if package_id:
             domain_quant += [('package_id', '=', package_id)]
-        if dates_in_the_past:
-            domain_move_in_done = list(domain_move_in)
-            domain_move_out_done = list(domain_move_out)
+#         if dates_in_the_past:
+        domain_move_in_done = list(domain_move_out)
+        domain_move_out_done = list(domain_move_in)
         domain_quant_actual_stock = copy(domain_quant)
         if from_date:
             domain_move_in += [('date', '>=', from_date)]
@@ -60,13 +60,16 @@ class ProductProduct(models.Model):
         moves_out_res = dict((item['product_id'][0], item['product_qty']) for item in Move.read_group(domain_move_out_todo, ['product_id', 'product_qty'], ['product_id'], orderby='id'))
         quants_res = dict((item['product_id'][0], item['qty']) for item in Quant.read_group(domain_quant, ['product_id', 'qty'], ['product_id'], orderby='id'))
         quants_res_actual_stock = dict((item['product_id'][0], item['qty']) for item in Quant.read_group(domain_quant_actual_stock, ['product_id', 'qty'], ['product_id'], orderby='id'))
-        if dates_in_the_past:
-            # Calculate the moves that were done before now to calculate back in time (as most questions will be recent ones)
+#         if dates_in_the_past:
+        # Calculate the moves that were done before now to calculate back in time (as most questions will be recent ones)
+        if to_date:
             domain_move_in_done = [('state', '=', 'done'), ('date', '>', to_date)] + domain_move_in_done
             domain_move_out_done = [('state', '=', 'done'), ('date', '>', to_date)] + domain_move_out_done
-            moves_in_res_past = dict((item['product_id'][0], item['product_qty']) for item in Move.read_group(domain_move_in_done, ['product_id', 'product_qty'], ['product_id'], orderby='id'))
-            moves_out_res_past = dict((item['product_id'][0], item['product_qty']) for item in Move.read_group(domain_move_out_done, ['product_id', 'product_qty'], ['product_id'], orderby='id'))
-
+        else:
+            domain_move_in_done = [('state', '=', 'done')] + domain_move_in_done
+            domain_move_out_done = [('state', '=', 'done')] + domain_move_out_done
+        moves_in_res_past = dict((item['product_id'][0], item['product_qty']) for item in Move.read_group(domain_move_in_done, ['product_id', 'product_qty'], ['product_id'], orderby='id'))
+        moves_out_res_past = dict((item['product_id'][0], item['product_qty']) for item in Move.read_group(domain_move_out_done, ['product_id', 'product_qty'], ['product_id'], orderby='id'))
         res = dict()
         for product in self.with_context(prefetch_fields=False):
             res[product.id] = {}
@@ -83,7 +86,6 @@ class ProductProduct(models.Model):
             res[product.id]['virtual_available'] = float_round(
                 qty_available + res[product.id]['incoming_qty'] - res[product.id]['outgoing_qty'],
                 precision_rounding=product.uom_id.rounding)
-
         return res
 
     stock_quant_ids = fields.One2many('stock.quant', 'product_id', help='Technical: used to compute quantities.')
@@ -129,7 +131,7 @@ class ProductProduct(models.Model):
 
 class ProductTemplate(models.Model):
     _inherit = 'product.template'
-
+    
     def _compute_quantities(self):
         res = self._compute_quantities_dict()
         for template in self:

@@ -14,7 +14,7 @@ Bahmni Web Extension
     'depends': ['web'],
     'data': ['views/web_templates.xml'],
     'demo': [],
-    'qweb': ['static/src/xml/*.xml'],
+    'qweb': ['static/src/xml/link_prescription.xml'],
     'installable': True,
     'application': True,
     'auto_install': False,

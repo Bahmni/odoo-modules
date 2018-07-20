@@ -4,16 +4,16 @@ from odoo import models, fields, api
 
 class AccountAbstractPayment(models.AbstractModel):
     _inherit = 'account.abstract.payment'
-    
-    journal_id = fields.Many2one('account.journal', string='Payment Journal', required=True,
-                                 domain=[('type', '=', 'cash')])
+
+# commented as per Ajeenckya's suggestion, as keeping bank journals in selection, will fulfill the generic way of using payment
+#     journal_id = fields.Many2one('account.journal', string='Payment Journal', required=True,
+#                                  domain=[('type', '=', 'cash')])
 
 
 class AccountPayment(models.Model):
     _inherit = 'account.payment'
 
-    @api.multi
-    @api.depends('partner_id', 'amount')
+    @api.onchange('partner_id', 'amount')
     def _calculate_balances(self):
         if(self.state != 'posted'):
             partner = self.partner_id
@@ -47,10 +47,26 @@ class AccountPayment(models.Model):
         res['domain']['journal_id'].append(('type', '=', 'cash'))
         return res
 
-    balance_before_pay = fields.Float(compute=_calculate_balances,
+    balance_before_pay = fields.Float(
+#                                       compute=_calculate_balances,
                                       string="Balance before pay")
-    total_balance = fields.Float(compute=_calculate_balances,
+    total_balance = fields.Float(
+#                                  compute=_calculate_balances,
                                  string="Total Balance")
     invoice_id = fields.Many2one('account.invoice', string='Invoice')
     bill_amount = fields.Float(string="Bill Amount")
-
+    
+    @api.multi
+    def print_payment(self):
+        datas = {
+            'id': self.ids,
+            'model': 'account.payment',
+            'form': self.read()
+        }
+        return {
+            'type': 'ir.actions.report.xml',
+            'report_name': 'bahmni_account.report_account_payment',
+            'datas': datas,
+            'nodestroy' : True
+        }
+    

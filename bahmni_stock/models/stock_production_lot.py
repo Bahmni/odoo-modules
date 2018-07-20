@@ -68,7 +68,7 @@ class StockProductionLot(models.Model):
     cost_price = fields.Float(string="Cost Price")
     stock_forecast = fields.Float(string="Available forecast",
                                      compute=_get_future_stock_forecast,
-                                     select=True,digits=dp.get_precision('Product Unit of Measure'),
+                                     digits=dp.get_precision('Product Unit of Measure'),
                                      help="Future stock forecast quantity of products with this Serial Number available in company warehouses",
                                      )
     

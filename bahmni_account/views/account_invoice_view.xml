@@ -60,12 +60,21 @@
 					<group style="width: 100%; border-top: 1px solid #cacaca;
 								font-weight: bold; white-space:nowrap;">
 						<div class="col-xs-6 oe_right footer_label">
-							<label for="amount_total" />
+							<label for="amount_total" style="font-weight:bold"/>
 							<button name="button_dummy" states="draft,sent" string="(update)" 
 							type="object" class="oe_edit_only oe_link"/>
 						</div>
 						<div class="col-xs-6 footer_field footer_text_bold" >
 							<field name="amount_total" />
+						</div>
+					</group>
+					<group style="width: 100%; border-top: 1px solid #cacaca;
+								font-weight: bold; white-space:nowrap;">
+						<div class="col-xs-6 oe_right footer_label">
+							<label for="residual" style="font-weight:bold"/>
+						</div>
+						<div class="col-xs-6 footer_field footer_text_bold" >
+							<field name="residual" />
 						</div>
 					</group>
 				</div>

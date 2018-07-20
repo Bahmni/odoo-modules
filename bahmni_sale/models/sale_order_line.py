@@ -2,11 +2,11 @@
 from datetime import datetime
 
 from odoo import models, fields, api
-from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF, float_is_zero
 
 
 class SaleOrderLine(models.Model):
-    _name = 'sale.order.line'
+    _inherit = 'sale.order.line'
 
     external_id = fields.Char(string="External ID",
                               help="This field is used to store encounter ID of bahmni api call")
@@ -16,9 +16,14 @@ class SaleOrderLine(models.Model):
                              help="Field for generating a random unique ID.")
     dispensed = fields.Boolean(string="Dispensed",
                                help="Flag to identify whether drug order is dispensed or not.")
-    batch_id = fields.Many2one('stock.production.lot', string="Batch No")
+    lot_id = fields.Many2one('stock.production.lot', string="Batch No")
     expiry_date = fields.Datetime(string="Expiry date")
     
+    @api.onchange('lot_id')
+    def onchange_lot_id(self):
+        if self.lot_id:
+            self.expiry_date = self.lot_id.life_date
+
     @api.model
     def get_available_batch_details(self, product_id, sale_order):
         context = self._context.copy() or {}
@@ -34,8 +39,27 @@ class SaleOrderLine(models.Model):
 
         query = ['&', ('product_id', '=', product_id), 
                  ('id', 'not in', already_used_batch_ids)]\
-                if len(already_used_batch_ids) > 0 else [('product_id','=',product_id)]
+                 if len(already_used_batch_ids) > 0 else [('product_id','=',product_id)]
         for prodlot in stock_prod_lot.with_context(context).search(query):
             if(prodlot.life_date and datetime.strptime(prodlot.life_date, DTF) >= datetime.today() and prodlot.future_stock_forecast > 0):
                 return prodlot
         return None
+    
+    @api.multi
+    def invoice_line_create(self, invoice_id, qty):
+        """
+        Create an invoice line. The quantity to invoice can be positive (invoice) or negative
+        (refund).
+ 
+        :param invoice_id: integer
+        :param qty: float quantity to invoice
+        """
+        precision = self.env['decimal.precision'].precision_get('Product Unit of Measure')
+        for line in self:
+            if not float_is_zero(qty, precision_digits=precision):
+                vals = line._prepare_invoice_line(qty=qty)
+                vals.update({'invoice_id': invoice_id, 
+                             'sale_line_ids': [(6, 0, [line.id])],
+                             'lot_id': line.lot_id.id,
+                             'expiry_date': line.expiry_date})
+                self.env['account.invoice.line'].create(vals)

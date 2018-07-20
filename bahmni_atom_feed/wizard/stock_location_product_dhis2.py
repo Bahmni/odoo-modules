@@ -25,22 +25,32 @@ class StockLocationProductDhis2(models.TransientModel):
         '''this method will return selection values for the years,
         for which entries are available in the system'''
         res = []
-        start_date_stock_move = self.env['stock.move'].search([], order='date asc', limit=1).date
-        start_date_stock_move = datetime.datetime.strptime(start_date_stock_move, DTF).date()
-        start_date_account_move = self.env['account.move'].search([], order='date asc', limit=1).date
-        start_date_account_move = datetime.datetime.strptime(start_date_account_move, DF).date()
-        start_year = False
-        if start_date_stock_move < start_date_account_move:
-            start_year = start_date_stock_move.year
-        else:
-            start_year = start_date_account_move.year
-        if (str(start_year), start_year) not in res:
-            res.append((str(start_year), start_year))
         date_today = datetime.date.today()
-        if date_today.year > start_year:
-            for i in range(start_year, date_today.year):
-                if (str(i+1), i+1) not in res:
-                    res.append((str(i+1), i+1))
+        start_date_stock_move = self.env['stock.move'].search([], order='date asc', limit=1).date
+        if start_date_stock_move:
+            start_date_stock_move = datetime.datetime.strptime(start_date_stock_move, DTF).date()
+        start_date_account_move = self.env['account.move'].search([], order='date asc', limit=1).date
+        if start_date_account_move:
+            start_date_account_move = datetime.datetime.strptime(start_date_account_move, DF).date()
+        if start_date_account_move and start_date_stock_move:
+            start_year = False
+            if start_date_stock_move < start_date_account_move:
+                start_year = start_date_stock_move.year
+            else:
+                start_year = start_date_account_move.year
+            if (str(start_year), start_year) not in res:
+                res.append((str(start_year), start_year))
+            if date_today.year > start_year:
+                for i in range(start_year, date_today.year):
+                    if (str(i+1), i+1) not in res:
+                        res.append((str(i+1), i+1))
+        else:
+            if start_date_account_move:
+                res.append((str(start_date_account_move.year), start_date_account_move.year))
+            elif start_date_stock_move:
+                res.append((str(start_date_stock_move.year), start_date_stock_move.year))
+            else:
+                res.append((str(date_today.year), date_today.year))
         return res
 
     from_date = fields.Datetime(string="From Date")

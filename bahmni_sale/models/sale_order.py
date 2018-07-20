@@ -177,8 +177,8 @@ class SaleOrder(models.Model):
     def create(self, vals):
         '''Inherited this method to directly convert quotation to sale order, when it is dispensed at location'''
         res = super(SaleOrder, self).create(vals)
-        auto_convert_set = pickle.loads(self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
-                                                                      ('name', '=', 'convert_dispensed')]).value.encode('utf-8'))
+        auto_convert_set = self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
+                                                         ('name', '=', 'convert_dispensed')]).value
         if auto_convert_set and vals.get('dispensed'):
             # confirm quotation
             res.action_confirm()

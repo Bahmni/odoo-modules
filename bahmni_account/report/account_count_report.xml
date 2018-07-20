@@ -40,7 +40,7 @@
     </record>
     
     <record id="action_search_account_count_reports" model="ir.actions.act_window">
-        <field name="name">Accounts Count Reports</field>
+        <field name="name">Accounts Count Report</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">account.count.report</field>
         <field name="view_type">form</field>

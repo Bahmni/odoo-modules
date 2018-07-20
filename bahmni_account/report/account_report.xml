@@ -41,7 +41,7 @@
     </record>
 
     <record id="action_search_account_reports" model="ir.actions.act_window">
-        <field name="name">SEARCH Accounts Reports</field>
+        <field name="name">Account Report</field>
         <field name="type">ir.actions.act_window</field>
         <field name="res_model">account.report</field>
         <field name="view_type">form</field>

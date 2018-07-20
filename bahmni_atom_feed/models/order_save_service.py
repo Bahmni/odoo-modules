@@ -70,6 +70,14 @@ class OrderSaveService(models.Model):
                 unprocessed_orders = self._filter_processed_orders(orders)
 
                 # instead of shop_id, warehouse_id is needed.
+                # in case of odoo 10, warehouse_id is required for creating order, not shop
+                # with each stock_picking_type, a warehouse id is linked.
+                # with each stock picking type, there exists a source_location and destination_location
+                # hence, creating a new object for ordertype and stock_picking_type mapping
+                # if mapping record with passed orderType does not exists, 
+                # will search for picking type whose source location is same as passed location, and it's linked warehouse will get passed to the order.
+                # else will look for warehouse, whose stock location is as per the location name
+                # without warehouse id, order cannot be created
                 location = self.env['stock.location'].search([('name', '=ilike', location_name)], limit=1)
                 if not location:
                     _logger.warning("No location found with name: %s"%(location_name))
@@ -94,6 +102,9 @@ class OrderSaveService(models.Model):
                                                                     ('origin', '=', 'ATOMFEED SYNC')])
 
                     if(not sale_order_ids):
+                        dispensed = False
+                        if unprocessed_order.get('dispensed') == 'true':
+                            dispensed = True
                         # Non Dispensed New
                         # replaced create_sale_order method call
                         sale_order_vals = {'partner_id': cus_id.id,
@@ -105,6 +116,7 @@ class OrderSaveService(models.Model):
                                            'pricelist_id': cus_id.property_product_pricelist and cus_id.property_product_pricelist.id or False,
                                            'picking_policy': 'direct',
                                            'state': 'draft',
+                                           'dispensed': dispensed
                                            }
                         sale_order = self.env['sale.order'].create(sale_order_vals)
                         for rec in unprocessed_non_dispensed_order:
@@ -147,31 +159,32 @@ class OrderSaveService(models.Model):
                         self._remove_existing_sale_order_line(sale_order_ids[0],unprocessed_dispensed_order)
 
                         #Removing existing empty sale order
-                        sale_order_line_ids = self.pool.get('sale.order.line').search(cr, uid, [('order_id', '=', sale_order_ids[0])], context=context)
+                        sale_order_line_ids = self.env['sale.order.line'].search([('order_id', '=', sale_order_ids[0])])
 
                         if(len(sale_order_line_ids) == 0):
-                            self.pool.get('sale.order').unlink(cr, uid, sale_order_ids, context=context)
+                            sale_order_ids.unlink()
 
                         #Dispensed New
-                        self._create_sale_order(cr, uid, cus_id, name, unprocessed_dispensed_order[0]['custom_local_shop_id'], unprocessed_dispensed_order, care_setting, provider_name, context)
-
-                        if(self._allow_automatic_convertion_to_saleorder (cr,uid)):
-                            sale_order_ids_for_dispensed = self.pool.get('sale.order').search(cr, uid, [('partner_id', '=', cus_id), ('shop_id', '=', unprocessed_dispensed_order[0]['custom_local_shop_id']), ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')], context=context)
-                            self.pool.get('sale.order').action_button_confirm(cr, uid, sale_order_ids_for_dispensed, context)
+                        self._create_sale_order(cus_id, name, unprocessed_dispensed_order[0]['location_id'],
+                                                unprocessed_dispensed_order, care_setting, provider_name)
+# 
+#                         if(self._allow_automatic_convertion_to_saleorder(cr,uid)):
+#                             sale_order_ids_for_dispensed = self.pool.get('sale.order').search(cr, uid, [('partner_id', '=', cus_id), ('shop_id', '=', unprocessed_dispensed_order[0]['custom_local_shop_id']), ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')], context=context)
+#                             self.pool.get('sale.order').action_button_confirm(cr, uid, sale_order_ids_for_dispensed, context)
 
                     else:
                         #Remove existing sale order line
-                        self._remove_existing_sale_order_line(cr,uid,sale_order_ids[0],unprocessed_dispensed_order,context=context)
+                        self._remove_existing_sale_order_line(sale_order_ids[0],unprocessed_dispensed_order)
 
                         #Removing existing empty sale order
-                        sale_order_line_ids = self.pool.get('sale.order.line').search(cr, uid, [('order_id', '=', sale_order_ids[0])], context=context)
+                        sale_order_line_ids = self.env['sale.order.line'].search([('order_id', '=', sale_order_ids[0])])
                         if(len(sale_order_line_ids) == 0):
-                            self.pool.get('sale.order').unlink(cr, uid, sale_order_ids, context=context)
+                            sale_order_ids.unlink()
 
                         #Dispensed Update
-                        self._update_sale_order(cr, uid, cus_id, name, unprocessed_dispensed_order[0]['custom_local_shop_id'], care_setting, sale_order_ids_for_dispensed[0], unprocessed_dispensed_order, provider_name, context)
+                        self._update_sale_order(cus_id, name, unprocessed_dispensed_order[0]['location'], care_setting, sale_order_ids_for_dispensed[0], unprocessed_dispensed_order, provider_name)
         else:
-            raise osv.except_osv(('Error!'), ("Patient Id not found in openerp"))
+            raise Warning("Patient Id not found in openerp")
 
     @api.model
     def _remove_existing_sale_order_line(self, sale_order_id, unprocessed_dispensed_order):
@@ -276,7 +289,7 @@ class OrderSaveService(models.Model):
                 'name': prod_obj.name,
                 'type': 'make_to_stock',
                 'state': 'draft',
-                'dispensed_status': order.get('dispensed', False)
+                'dispensed': True if order.get('dispensed') == 'true' or (order.get('dispensed') and order.get('dispensed')!='false') else False
             }
 
             if prod_lot != None:

@@ -11,10 +11,10 @@ class prod_last_moved_report(models.Model):
     _order = 'last_moved_date desc'
 
     product_id = fields.Many2one('product.product', string="Product",
-                                 readonly=True, select=True)
+                                 readonly=True)
     origin = fields.Text(string="Origin", readonly=True)
     location_id = fields.Many2one('stock.location', string="Source Location",
-                                  readonly=True, select=True)
+                                  readonly=True)
     location_dest_id = fields.Many2one('stock.location',
                                        string="Destination Location")
     last_moved_date = fields.Datetime(string="Last Moved Date")

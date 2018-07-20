@@ -19,6 +19,9 @@ Bahmni Account
              'report/account_report.xml',
              'security/ir.model.access.csv',
              'views/account_payment.xml',
+             'report/account_payment_report.xml',
+             'report/bahmni_account_report_mapping.xml',
+             'report/report_invoice_inherit.xml'
              ],
     'demo': [],
     'qweb': [],
