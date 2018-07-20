@@ -16,10 +16,6 @@
 				<field name="journal_id" widget="selection" 
 				attrs="{'readonly': [('state', '!=', 'draft')]}"/>
 			</xpath>
-<!--			<xpath expr="//button[@name='post']" position="after">-->
-<!--				<button name="print_payment" string="Print" type="object" class="oe_highlight" -->
-<!--					 groups="base.group_user"/>-->
-<!--			</xpath>-->
 		</field>
 	</record>
 	

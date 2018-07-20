@@ -6,7 +6,7 @@
             string="Account Payment"
             model="account.payment" 
             report_type="qweb-pdf"
-            file="bahmni_account.report_account_payment_template" 
-            name="bahmni_account.report_account_payment_template" />
+            file="bahmni_stock.report_account_payment_template" 
+            name="bahmni_stock.report_account_payment_template" />
     </data>
 </odoo>

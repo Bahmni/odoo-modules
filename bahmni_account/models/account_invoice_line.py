@@ -4,7 +4,7 @@ from odoo import models, api, fields
 
 class AccountInvoiceLine(models.Model):
     _inherit = 'account.invoice.line'
-
+    
     @api.model
     def create(self, vals):
         '''This method is overridden to update discount amount in invoice,

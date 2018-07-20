@@ -14,7 +14,6 @@ Bahmni Sale
     'depends': ['sale', 'sale_stock', 'bahmni_account'],
     'data': ['security/security_groups.xml',
              'views/bahmni_sale.xml',
-#              'views/price_markup_table_view.xml',
              'views/village_master_view.xml',
              'views/sale_order_views.xml',
              'views/sale_config_settings.xml'],
