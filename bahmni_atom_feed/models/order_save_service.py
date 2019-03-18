@@ -24,8 +24,12 @@ class OrderSaveService(models.Model):
     
     @api.model
     def _get_warehouse_id(self, location, orderType):
+        _logger.info("!!!!!!!ORDER TYPE!!!!!!!!!")
+        _logger.info(orderType)
         if location:
-            order_type = self.env[('name', '=like', orderType)]
+            order_type = self.env['order.type'].search([('name', '=', orderType)])
+            if not order_type:
+		order_type = self.env['order.type'].create({'name':orderType})
             operation_types = self.env['stock.picking.type'].search([('default_location_src_id', '=', location.id)])
             if order_type and operation_types:
                 mapping = self.env['order.picking.type.mapping'].search([('order_type_id', '=', order_type.id),
@@ -78,10 +82,19 @@ class OrderSaveService(models.Model):
                 # will search for picking type whose source location is same as passed location, and it's linked warehouse will get passed to the order.
                 # else will look for warehouse, whose stock location is as per the location name
                 # without warehouse id, order cannot be created
-                location = self.env['stock.location'].search([('name', '=ilike', location_name)], limit=1)
+                location = self.env['stock.location'].search([('name', '=', location_name)], limit=1)
+                if not location:
+                   location = self.env['stock.location'].create({'name':location_name})
                 if not location:
                     _logger.warning("No location found with name: %s"%(location_name))
                 warehouse_id = self._get_warehouse_id(location, orderType)
+                if not warehouse_id:
+                    #self.env['stock.warehouse'].create({'name':,'code':})
+                    operation_type = self.env['stock.picking.type'].search([('name', '=', 'Delivery Orders')],
+                                                                        limit=1)
+                    warehouse_id = operation_type.warehouse_id.id
+                _logger.info("!!!!!!!!!!!!!!!WAREHOUSE!!!!!!!!!!!!!!!!!!!!!")
+                _logger.info(warehouse_id)
 
                 name = self.env['ir.sequence'].next_by_code('sale.order')
                 #Adding both the ids to the unprocessed array of orders, Separating to dispensed and non-dispensed orders
@@ -268,6 +281,8 @@ class OrderSaveService(models.Model):
             comments = " ".join([str(actual_quantity), str(order.get('quantityUnits', None))])
 
             default_quantity_total = self.env.ref('bahmni_sale_discount', 'group_default_quantity')
+            _logger.info("""""""""""""""""""DEFAULT QUANTITY TOTAL""""""""""""""""""""""""""""""""""")
+            _logger.info(default_quantity_total)
             default_quantity_value = 1
             if default_quantity_total and len(default_quantity_total.users) > 0:
                 default_quantity_value = -1

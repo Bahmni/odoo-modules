@@ -27,9 +27,10 @@ class SaleOrderLine(models.Model):
     @api.model
     def get_available_batch_details(self, product_id, sale_order):
         context = self._context.copy() or {}
-        context['location_id'] = sale_order.location_id.id
+        sale_order = self.env['sale.order'].browse(sale_order)
+        context['location_id'] = sale_order.location_id and sale_order.location_id.id or False
         context['search_in_child'] = True
-        stock_prod_lot = self.pool.get('stock.production.lot')
+        stock_prod_lot = self.env['stock.production.lot']#.search([('product_id','=',product_id)])
 
         already_used_batch_ids = []
         for line in sale_order.order_line:

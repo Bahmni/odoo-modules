@@ -113,7 +113,7 @@
 			</xpath>
 			<xpath expr="//field[@name='order_line']/tree/field[@name='qty_delivered']" position="after">
 				<field name="lot_id" domain="[('product_id', '=', product_id)]"/>
-				<field name="expiry_date" readonly="1"/>
+				<!--field name="expiry_date" readonly="1"/-->
 			</xpath>
 		</field>
 	</record>

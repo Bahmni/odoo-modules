@@ -7,3 +7,5 @@ import res_partner
 import res_company
 import order_picking_type_mapping
 import syncable_units
+import atom_feed_marker
+import order_save_service

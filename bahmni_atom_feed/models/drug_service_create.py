@@ -43,10 +43,11 @@ class DrugServiceCreate(models.Model):
     @api.model
     def _create_or_update_drug(self, vals):
         '''Method for creating/updating a new product under drug category'''
-        products = self.env["product.product"].search([('uuid', '=', vals.get("uuid"))])
+        products = self.env['product.product'].search([('uuid', '=', vals.get("uuid"))])
         updated_drug = self._fill_drug_object(vals, products.ids)
         if products:
-            self.env['product.product'].write(products.ids[0:1], updated_drug)
+            product = self.env['product.product'].browse(products.ids[0:1])
+            product.write(updated_drug)
         else:
             self.env['product.product'].create(updated_drug)
 
@@ -56,10 +57,14 @@ class DrugServiceCreate(models.Model):
         drug = {}
         category_name = drug_from_feed.get("dosageForm")
         category = self.env["product.category"].search([('name', '=', category_name)])
-        category_from_db = category.read([])[0]
-        categ_id = category_from_db and category_from_db.get('id') or self._create_in_drug_category(category_name)
-        list_price = drug_ids_from_db and self.env['product.product'].browse(drug_ids_from_db[0]).list_price or 0.0
+        
+	if category.read([]):
+            category_from_db = category.read([])[0]
+            categ_id = category_from_db and category_from_db.get('id') or self._create_in_drug_category(category_name)
+        else:
+	    categ_id = self.env["product.category"].create({'name':category_name}).id
 
+        list_price = drug_ids_from_db and self.env['product.product'].browse(drug_ids_from_db[0]).list_price or 0.0
         drug["uuid"] = drug_from_feed.get("uuid")
         drug["name"] = drug_from_feed.get("name")
         drug["default_code"] = drug_from_feed.get("shortName")
@@ -91,6 +96,9 @@ class DrugServiceCreate(models.Model):
 
     @api.model
     def _create_category_in_hierarchy(self, category_name, category_hierarchy):
+        _logger.info("!!!!!!!!!!!!!!!!!!!!!!CATEGORY!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        _logger.info(category_name)
+        _logger.info(category_hierarchy)
         if (len(category_hierarchy) > 0):
             category_ids = self.env['product.category'].search([('name', '=', category_hierarchy[0])]).ids
             if (len(category_ids) > 0):
@@ -110,9 +118,12 @@ class DrugServiceCreate(models.Model):
         category_name = category
         category_hierarchy = self._get_category_hierarchy(category)
         category_obj = self.env['product.category'].search([('name', '=', category_name)])
-        category_from_db = category_obj.read()[0]
-        categ_id = category_from_db and category_from_db.get('id') or \
-                    self._create_category_in_hierarchy(category_name, category_hierarchy).id
+        if category_obj.read():
+            category_from_db = category_obj.read()[0]
+            categ_id = category_from_db and category_from_db.get('id') or \
+            self._create_category_in_hierarchy(category_name, category_hierarchy).id
+        else:
+            categ_id = self.env['product.category'].create({'name':category_name}).id
         data["uuid"] = vals.get("uuid")
         data["name"] = vals.get("name")
         data["active"] = vals.get("is_active")
