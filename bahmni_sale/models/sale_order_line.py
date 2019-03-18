@@ -34,8 +34,8 @@ class SaleOrderLine(models.Model):
 
         already_used_batch_ids = []
         for line in sale_order.order_line:
-            if line.batch_id:
-                id = line.batch_id.id
+            if line.lot_id:
+                id = line.lot_id.id
                 already_used_batch_ids.append(id.__str__())
 
         query = ['&', ('product_id', '=', product_id), 

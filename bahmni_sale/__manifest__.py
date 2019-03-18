@@ -13,6 +13,7 @@ Bahmni Sale
     'images': [],
     'depends': ['sale', 'sale_stock', 'bahmni_account'],
     'data': ['security/security_groups.xml',
+             'data/data.xml',
              'views/bahmni_sale.xml',
              'views/village_master_view.xml',
              'views/sale_order_views.xml',

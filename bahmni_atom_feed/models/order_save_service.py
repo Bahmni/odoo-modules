@@ -146,7 +146,7 @@ class OrderSaveService(models.Model):
                                 for rec in unprocessed_non_dispensed_order:
                                     self._process_orders(order, unprocessed_non_dispensed_order, rec)
 
-                    sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id),
+                    sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id.id),
                                                                                   ('location_id', '=', unprocessed_non_dispensed_order[0]['location_id']),
                                                                                   ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')])
 
@@ -231,7 +231,7 @@ class OrderSaveService(models.Model):
         if(order.get('previousOrderId', False) and order.get('dispensed', "") == "false"):
             parent_order = self._fetch_parent(all_orders, order)
             if(parent_order):
-                self._process_orders(sale_order, all_orders, parent_order, context=None)
+                self._process_orders(sale_order, all_orders, parent_order)
             parent_order_line = self.env['sale.order.line'].search([('external_order_id', '=', order['previousOrderId'])])
             if(not parent_order_line and not self._order_already_processed(order['previousOrderId'], order.get('dispensed', False))):
                 raise Warning("Previous order id does not exist in DB. This can be because of previous failed events")
@@ -280,8 +280,8 @@ class OrderSaveService(models.Model):
             actual_quantity = order['quantity']
             comments = " ".join([str(actual_quantity), str(order.get('quantityUnits', None))])
 
-            default_quantity_total = self.env.ref('bahmni_sale_discount', 'group_default_quantity')
-            _logger.info("""""""""""""""""""DEFAULT QUANTITY TOTAL""""""""""""""""""""""""""""""""""")
+            default_quantity_total = self.env.ref('bahmni_sale.group_default_quantity')
+            _logger.info("DEFAULT QUANTITY TOTAL")
             _logger.info(default_quantity_total)
             default_quantity_value = 1
             if default_quantity_total and len(default_quantity_total.users) > 0:
@@ -298,7 +298,7 @@ class OrderSaveService(models.Model):
                 'comments': comments,
                 'product_uom_qty': product_uom_qty,
                 'product_uom': prod_obj.uom_id.id,
-                'order_id': sale_order.id,
+                'order_id': sale_order,
                 'external_id':order['encounterId'],
                 'external_order_id':order['orderId'],
                 'name': prod_obj.name,
@@ -316,7 +316,7 @@ class OrderSaveService(models.Model):
 
             sale_order_line_obj.create(sale_order_line)
 
-            sale_order = self.env['sale.order'].browse(sale_order.id)
+            sale_order = self.env['sale.order'].browse(sale_order)
 
             if product_uom_qty != order['quantity']:
                 order['quantity'] = order['quantity'] - product_uom_qty
