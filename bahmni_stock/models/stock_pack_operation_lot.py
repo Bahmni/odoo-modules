@@ -5,6 +5,7 @@ from datetime import datetime
 from odoo import models, fields, api, _
 from odoo.exceptions import Warning
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
+
 logger = logging.getLogger(__name__)
 
 class StockPackOperation(models.Model):
@@ -22,12 +23,15 @@ class StockPackOperation(models.Model):
         # Create a picking and click on the Mark as TODO button to display the Lot Split icon. A window will pop-up. Click on Add an item and fill in the serial numbers and click on save button
         for pack in self:
             if pack.product_id.tracking != 'none':
+                mrp = pack.linked_move_operation_ids[0].move_id.purchase_line_id.mrp
+                unit_price = pack.linked_move_operation_ids[0].move_id.purchase_line_id.price_unit
                 for lot in pack.pack_lot_ids:
-                    logger.info("LOT LIFE DATE")
-                    logger.info(lot.lot_id.life_date)
                     if lot.expiry_date and lot.lot_id:
                         lot.lot_id.life_date = lot.expiry_date
                         lot.lot_id.use_date = lot.expiry_date
+                    lot.lot_id.mrp = mrp
+                    lot.lot_id.cost_price = unit_price
+                    lot.lot_id.sale_price = unit_price
                     #life_date = datetime.strptime(lot.lot_id.life_date, DTF)
                     #if life_date < datetime.today():
                         #raise Warning("Lot %s is expired, you can process expired lot!"%(lot.lot_id.name))
@@ -54,4 +58,3 @@ class StockPackOperationLot(models.Model):
             #'lot_id': self.lot_id.id}).browse(self.operation_id.product_id.id).qty_available
             #self.expiry_date = self.lot_id.life_date
             
-         
