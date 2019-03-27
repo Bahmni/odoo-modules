@@ -14,6 +14,9 @@
 			<xpath expr="//field[@name='client_order_ref']" position="after">
 				<field name="dispensed" invisible="1"/>
 			</xpath>
+                        <xpath expr="//field[@name='partner_id']" position="after">
+				<field name="partner_uuid" invisible="1"/>
+			</xpath>
 			<xpath expr="//notebook/page[1]/group" position="replace">
 				<div class="col-xs-5 pull-right text-right" style="padding-right:0px">
 					<div class="col-xs-6 footer_label" style="min-height: 28px;">

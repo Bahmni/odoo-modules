@@ -51,7 +51,7 @@ class SaleOrder(models.Model):
             order.total_outstanding_balance = 0.0
             total_receivable = order._total_receivable()
             order.prev_outstanding_balance = total_receivable
-
+    
     def _total_receivable(self):
         receivable = 0.0
         if self.partner_id:
@@ -69,6 +69,16 @@ class SaleOrder(models.Model):
                     val=0
                 receivable = (type == 'receivable') and val or -val
         return receivable
+
+    @api.depends('partner_id')
+    def _get_partner_details(self):
+        for order in self:
+            partner = order.partner_id
+            order.update({
+                'partner_uuid': partner.uuid,
+                #'partner_village': partner.village,
+            })
+
 
     external_id = fields.Char(string="External Id",
                               help="This field is used to store encounter ID of bahmni api call")
@@ -96,6 +106,9 @@ class SaleOrder(models.Model):
     amount_round_off = fields.Float(string="Round Off Amount")
     # location to identify from which location order is placed.
     location_id = fields.Many2one('stock.location', string="Location")
+    partner_uuid = fields.Char(string='Customer UUID', store=True, readonly=True, compute='_get_partner_details')
+
+
 
     @api.onchange('order_line')
     def onchange_order_line(self):

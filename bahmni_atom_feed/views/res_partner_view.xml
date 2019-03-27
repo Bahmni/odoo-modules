@@ -21,6 +21,9 @@ and in case user exactly don't know the position, he/she will need to search for
 			<xpath expr="//field[@name='type']" position="after">
 				<field name="ref" required="1"/>
 			</xpath>
+                        <xpath expr="//field[@name='lang']" position="after">
+                                <field name="uuid" invisible = "1"/>
+                        </xpath>
 		</field>
 	</record>
 	
