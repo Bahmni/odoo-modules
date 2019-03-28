@@ -107,7 +107,7 @@ class SaleOrder(models.Model):
     # location to identify from which location order is placed.
     location_id = fields.Many2one('stock.location', string="Location")
     partner_uuid = fields.Char(string='Customer UUID', store=True, readonly=True, compute='_get_partner_details')
-
+    shop_id = fields.Many2one('sale.shop', 'Shop', required=True)
 
 
     @api.onchange('order_line')
@@ -268,4 +268,13 @@ class SaleOrder(models.Model):
                 account_payment = account_payment_env.create(default_fields)
                 account_payment.post()
         return res
-    
+class SaleShop(models.Model):
+    _name = "sale.shop"
+    _description = "Sales Shop"
+
+    name = fields.Char('Shop Name', size=64, required=True)
+    warehouse_id = fields.Many2one('stock.warehouse', 'Warehouse')
+    payment_default_id = fields.Many2one('account.payment.term', 'Default Payment Term', required=True)
+    pricelist_id = fields.Many2one('product.pricelist', 'Pricelist')
+    project_id = fields.Many2one('account.analytic.account', 'Analytic Account')#domain=[('parent_id', '!=', False)]
+    company_id = fields.Many2one('res.company', 'Company', required=False, default=lambda self: self.env['res.company']._company_default_get('sale.shop')) 
