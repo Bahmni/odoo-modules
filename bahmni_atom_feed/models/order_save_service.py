@@ -52,6 +52,42 @@ class OrderSaveService(models.Model):
         else:
             _logger.warning("Location with name '%s' does not exists in the system")
 
+       
+    @api.model 
+    def _get_shop_and_local_shop_id(self, orderType, location_name):
+        _logger.info("\n\n _get_shop_and_local_shop_id().... Called.....")
+        _logger.info("orderType %s",orderType)
+        _logger.info("location_name %s",location_name)
+        OrderTypeShopMap = self.env['order.type.shop.map']
+        SaleShop = self.env['sale.shop']
+        if (location_name):
+            shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', orderType), ('location_name', '=', location_name)])
+            _logger.info("shop_list_with_orderType %s",shop_list_with_orderType)
+            #_logger.info("shop_list_with_orderType %s",shop_list_with_orderType[0])
+            #_logger.info("Len of shop_list_with_orderType  %s", len(shop_list_with_orderType))
+            if not shop_list_with_orderType:
+                shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', orderType), ('location_name', '=', None)])
+                if not shop_list_with_orderType:
+                    return (False, False)
+                else:
+                    _logger.info("In First ELSE.....shop_list_with_orderType %s", shop_list_with_orderType)
+                    order_type_map_object = shop_list_with_orderType[0]
+                    if order_type_map_object.shop_id:
+                        shop_id = order_type_map_object.shop_id.id
+                    else:
+                        shop_records = SaleShop.search(cr, uid, [], context=context)
+                        first_shop = shop_records[0]
+                        shop_id = first_shop.id
+
+                    if order_type_map_object.local_shop_id:
+                        local_shop_id = order_type_map_object.local_shop_id.id
+                    else:
+                        local_shop_id = False
+                    return (shop_id, local_shop_id)
+        return (False, False)
+
+
+
     @api.model
     def create_orders(self, vals):
         customer_id = vals.get("customer_id")
@@ -72,7 +108,12 @@ class OrderSaveService(models.Model):
                 provider_name = orders[0].get('providerName')
                 # will return order line data for products which exists in the system, either with productID passed or with conceptName
                 unprocessed_orders = self._filter_processed_orders(orders)
+                tup = self._get_shop_and_local_shop_id(orderType, location_name)
+                shop_id = tup[0]
+                local_shop_id = tup[1]
 
+                if (not shop_id):
+                    continue
                 # instead of shop_id, warehouse_id is needed.
                 # in case of odoo 10, warehouse_id is required for creating order, not shop
                 # with each stock_picking_type, a warehouse id is linked.
@@ -129,7 +170,8 @@ class OrderSaveService(models.Model):
                                            'pricelist_id': cus_id.property_product_pricelist and cus_id.property_product_pricelist.id or False,
                                            'picking_policy': 'direct',
                                            'state': 'draft',
-                                           'dispensed': dispensed
+                                           'dispensed': dispensed,
+                                           'shop_id' : shop_id,
                                            }
                         sale_order = self.env['sale.order'].create(sale_order_vals)
                         for rec in unprocessed_non_dispensed_order:
@@ -178,8 +220,25 @@ class OrderSaveService(models.Model):
                             sale_order_ids.unlink()
 
                         #Dispensed New
-                        self._create_sale_order(cus_id, name, unprocessed_dispensed_order[0]['location_id'],
-                                                unprocessed_dispensed_order, care_setting, provider_name)
+
+                        sale_order_vals = {'partner_id': cus_id.id,
+                                           'location_id': unprocessed_non_dispensed_order[0]['location_id'],
+                                           'warehouse_id': unprocessed_non_dispensed_order[0]['warehouse_id'],
+                                           'care_setting': care_setting,
+                                           'provider_name': provider_name,
+                                           'date_order': datetime.strftime(datetime.now(), DTF),
+                                           'pricelist_id': cus_id.property_product_pricelist and cus_id.property_product_pricelist.id or False,
+                                           'picking_policy': 'direct',
+                                           'state': 'draft',
+                                           'dispensed': dispensed,
+                                           'shop_id' : shop_id,
+                                           }
+
+                        sale_order = self.env['sale.order'].create(sale_order_vals)
+
+
+                        #self._create_sale_order(cus_id, name, unprocessed_dispensed_order[0]['location_id'],
+                        #unprocessed_dispensed_order, care_setting, provider_name)
 # 
 #                         if(self._allow_automatic_convertion_to_saleorder(cr,uid)):
 #                             sale_order_ids_for_dispensed = self.pool.get('sale.order').search(cr, uid, [('partner_id', '=', cus_id), ('shop_id', '=', unprocessed_dispensed_order[0]['custom_local_shop_id']), ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')], context=context)
