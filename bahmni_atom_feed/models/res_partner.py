@@ -13,6 +13,8 @@ class ResPartner(models.Model):
     tehsil_id = fields.Many2one('district.tehsil', string="Tehsil")
     district_id = fields.Many2one('state.district', string="District")
     local_name = fields.Char(string="Local Name")
+    uuid = fields.Char(string = "UUID")
+
 
     # inherited to update display name w.r.t. ref field 
     # and hence user can search customer with reference too

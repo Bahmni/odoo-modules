@@ -7,6 +7,7 @@ class ResUsers(models.Model):
     _inherit = 'res.users'
 
     password = fields.Char(invisible=True)
+    shop_id = fields.Many2one('sale.shop', 'Shop', required=True)
 
     @api.model
     def check_credentials(self, password):

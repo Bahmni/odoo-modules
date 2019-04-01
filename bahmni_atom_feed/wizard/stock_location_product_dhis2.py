@@ -66,11 +66,9 @@ class StockLocationProductDhis2(models.TransientModel):
     def action_generate_csv(self):
         self.ensure_one()
         dialog_box_data = self.read(['month', 'year', 'to_date', 'from_date'])[0]
-#         print "dialog_box_data>>>>>>>", type(dialog_box_data['year'])
-#         dialog_box_data.update({'year': int(dialog_box_data['year'])})
         export_data = self._get_export_data(dialog_box_data)
         csv_data = CSVExport().from_data(self.HEADERS, export_data)
-# 
+ 
         self.write({'data': base64.encodestring(csv_data),
                     'state': 'get'})
         return {

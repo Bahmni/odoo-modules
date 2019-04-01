@@ -19,8 +19,9 @@ var link_prescription = FieldChar.extend({
 
    start: function() {
         this._super.apply(this, arguments);
-        console.log(">>>>>>>>>>", $('#latest-prescription'))
-        $('#latest-prescription').click($.proxy(function() {
+        //console.log(">>>>>>>>>>", $('#latest-prescription'))
+        this.parent.$el.find('.oe_web_example').replaceWith('<button name="latest-prescription" type="object" class="btn btn-sm" id="latest-prescription" accesskey="P">Latest Prescription</button>');
+        this.parent.$el.find('#latest-prescription').click($.proxy(function() {
             if(this.parent.datarecord.partner_uuid != null) {
                 this.openLatestPrescription(this.parent.datarecord.partner_uuid);
             } else {

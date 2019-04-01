@@ -24,8 +24,12 @@ class OrderSaveService(models.Model):
     
     @api.model
     def _get_warehouse_id(self, location, orderType):
+        _logger.info("!!!!!!!ORDER TYPE!!!!!!!!!")
+        _logger.info(orderType)
         if location:
-            order_type = self.env[('name', '=like', orderType)]
+            order_type = self.env['order.type'].search([('name', '=', orderType)])
+            if not order_type:
+		order_type = self.env['order.type'].create({'name':orderType})
             operation_types = self.env['stock.picking.type'].search([('default_location_src_id', '=', location.id)])
             if order_type and operation_types:
                 mapping = self.env['order.picking.type.mapping'].search([('order_type_id', '=', order_type.id),
@@ -48,6 +52,42 @@ class OrderSaveService(models.Model):
         else:
             _logger.warning("Location with name '%s' does not exists in the system")
 
+       
+    @api.model 
+    def _get_shop_and_local_shop_id(self, orderType, location_name):
+        _logger.info("\n\n _get_shop_and_local_shop_id().... Called.....")
+        _logger.info("orderType %s",orderType)
+        _logger.info("location_name %s",location_name)
+        OrderTypeShopMap = self.env['order.type.shop.map']
+        SaleShop = self.env['sale.shop']
+        if (location_name):
+            shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', orderType), ('location_name', '=', location_name)])
+            _logger.info("shop_list_with_orderType %s",shop_list_with_orderType)
+            #_logger.info("shop_list_with_orderType %s",shop_list_with_orderType[0])
+            #_logger.info("Len of shop_list_with_orderType  %s", len(shop_list_with_orderType))
+            if not shop_list_with_orderType:
+                shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', orderType), ('location_name', '=', None)])
+                if not shop_list_with_orderType:
+                    return (False, False)
+                else:
+                    _logger.info("In First ELSE.....shop_list_with_orderType %s", shop_list_with_orderType)
+                    order_type_map_object = shop_list_with_orderType[0]
+                    if order_type_map_object.shop_id:
+                        shop_id = order_type_map_object.shop_id.id
+                    else:
+                        shop_records = SaleShop.search(cr, uid, [], context=context)
+                        first_shop = shop_records[0]
+                        shop_id = first_shop.id
+
+                    if order_type_map_object.local_shop_id:
+                        local_shop_id = order_type_map_object.local_shop_id.id
+                    else:
+                        local_shop_id = False
+                    return (shop_id, local_shop_id)
+        return (False, False)
+
+
+
     @api.model
     def create_orders(self, vals):
         customer_id = vals.get("customer_id")
@@ -68,7 +108,12 @@ class OrderSaveService(models.Model):
                 provider_name = orders[0].get('providerName')
                 # will return order line data for products which exists in the system, either with productID passed or with conceptName
                 unprocessed_orders = self._filter_processed_orders(orders)
+                tup = self._get_shop_and_local_shop_id(orderType, location_name)
+                shop_id = tup[0]
+                local_shop_id = tup[1]
 
+                if (not shop_id):
+                    continue
                 # instead of shop_id, warehouse_id is needed.
                 # in case of odoo 10, warehouse_id is required for creating order, not shop
                 # with each stock_picking_type, a warehouse id is linked.
@@ -78,10 +123,19 @@ class OrderSaveService(models.Model):
                 # will search for picking type whose source location is same as passed location, and it's linked warehouse will get passed to the order.
                 # else will look for warehouse, whose stock location is as per the location name
                 # without warehouse id, order cannot be created
-                location = self.env['stock.location'].search([('name', '=ilike', location_name)], limit=1)
+                location = self.env['stock.location'].search([('name', '=', location_name)], limit=1)
+                if not location:
+                   location = self.env['stock.location'].create({'name':location_name})
                 if not location:
                     _logger.warning("No location found with name: %s"%(location_name))
                 warehouse_id = self._get_warehouse_id(location, orderType)
+                if not warehouse_id:
+                    #self.env['stock.warehouse'].create({'name':,'code':})
+                    operation_type = self.env['stock.picking.type'].search([('name', '=', 'Delivery Orders')],
+                                                                        limit=1)
+                    warehouse_id = operation_type.warehouse_id.id
+                _logger.info("!!!!!!!!!!!!!!!WAREHOUSE!!!!!!!!!!!!!!!!!!!!!")
+                _logger.info(warehouse_id)
 
                 name = self.env['ir.sequence'].next_by_code('sale.order')
                 #Adding both the ids to the unprocessed array of orders, Separating to dispensed and non-dispensed orders
@@ -116,7 +170,8 @@ class OrderSaveService(models.Model):
                                            'pricelist_id': cus_id.property_product_pricelist and cus_id.property_product_pricelist.id or False,
                                            'picking_policy': 'direct',
                                            'state': 'draft',
-                                           'dispensed': dispensed
+                                           'dispensed': dispensed,
+                                           'shop_id' : shop_id,
                                            }
                         sale_order = self.env['sale.order'].create(sale_order_vals)
                         for rec in unprocessed_non_dispensed_order:
@@ -133,7 +188,7 @@ class OrderSaveService(models.Model):
                                 for rec in unprocessed_non_dispensed_order:
                                     self._process_orders(order, unprocessed_non_dispensed_order, rec)
 
-                    sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id),
+                    sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id.id),
                                                                                   ('location_id', '=', unprocessed_non_dispensed_order[0]['location_id']),
                                                                                   ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')])
 
@@ -165,8 +220,25 @@ class OrderSaveService(models.Model):
                             sale_order_ids.unlink()
 
                         #Dispensed New
-                        self._create_sale_order(cus_id, name, unprocessed_dispensed_order[0]['location_id'],
-                                                unprocessed_dispensed_order, care_setting, provider_name)
+
+                        sale_order_vals = {'partner_id': cus_id.id,
+                                           'location_id': unprocessed_non_dispensed_order[0]['location_id'],
+                                           'warehouse_id': unprocessed_non_dispensed_order[0]['warehouse_id'],
+                                           'care_setting': care_setting,
+                                           'provider_name': provider_name,
+                                           'date_order': datetime.strftime(datetime.now(), DTF),
+                                           'pricelist_id': cus_id.property_product_pricelist and cus_id.property_product_pricelist.id or False,
+                                           'picking_policy': 'direct',
+                                           'state': 'draft',
+                                           'dispensed': dispensed,
+                                           'shop_id' : shop_id,
+                                           }
+
+                        sale_order = self.env['sale.order'].create(sale_order_vals)
+
+
+                        #self._create_sale_order(cus_id, name, unprocessed_dispensed_order[0]['location_id'],
+                        #unprocessed_dispensed_order, care_setting, provider_name)
 # 
 #                         if(self._allow_automatic_convertion_to_saleorder(cr,uid)):
 #                             sale_order_ids_for_dispensed = self.pool.get('sale.order').search(cr, uid, [('partner_id', '=', cus_id), ('shop_id', '=', unprocessed_dispensed_order[0]['custom_local_shop_id']), ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')], context=context)
@@ -218,7 +290,7 @@ class OrderSaveService(models.Model):
         if(order.get('previousOrderId', False) and order.get('dispensed', "") == "false"):
             parent_order = self._fetch_parent(all_orders, order)
             if(parent_order):
-                self._process_orders(sale_order, all_orders, parent_order, context=None)
+                self._process_orders(sale_order, all_orders, parent_order)
             parent_order_line = self.env['sale.order.line'].search([('external_order_id', '=', order['previousOrderId'])])
             if(not parent_order_line and not self._order_already_processed(order['previousOrderId'], order.get('dispensed', False))):
                 raise Warning("Previous order id does not exist in DB. This can be because of previous failed events")
@@ -267,7 +339,9 @@ class OrderSaveService(models.Model):
             actual_quantity = order['quantity']
             comments = " ".join([str(actual_quantity), str(order.get('quantityUnits', None))])
 
-            default_quantity_total = self.env.ref('bahmni_sale_discount', 'group_default_quantity')
+            default_quantity_total = self.env.ref('bahmni_sale.group_default_quantity')
+            _logger.info("DEFAULT QUANTITY TOTAL")
+            _logger.info(default_quantity_total)
             default_quantity_value = 1
             if default_quantity_total and len(default_quantity_total.users) > 0:
                 default_quantity_value = -1
@@ -283,7 +357,7 @@ class OrderSaveService(models.Model):
                 'comments': comments,
                 'product_uom_qty': product_uom_qty,
                 'product_uom': prod_obj.uom_id.id,
-                'order_id': sale_order.id,
+                'order_id': sale_order,
                 'external_id':order['encounterId'],
                 'external_order_id':order['orderId'],
                 'name': prod_obj.name,
@@ -301,7 +375,7 @@ class OrderSaveService(models.Model):
 
             sale_order_line_obj.create(sale_order_line)
 
-            sale_order = self.env['sale.order'].browse(sale_order.id)
+            sale_order = self.env['sale.order'].browse(sale_order)
 
             if product_uom_qty != order['quantity']:
                 order['quantity'] = order['quantity'] - product_uom_qty

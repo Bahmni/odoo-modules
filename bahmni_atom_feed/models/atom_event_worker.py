@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 import logging
-
+import json
 _logger = logging.getLogger(__name__)
 
 
@@ -9,7 +9,7 @@ class AtomEventWorker(models.Model):
     _name = 'atom.event.worker'
     _auto = False
 
-    @api.multi
+    @api.model
     def process_event(self, vals):
         '''Method getting triggered from Bahmni side'''
         _logger.info("vals")
@@ -18,8 +18,6 @@ class AtomEventWorker(models.Model):
 #         patient_ref = vals.get("ref")
         if(category == "create.customer"):
             self._create_or_update_customer(vals)
-        if category == 'create.drug.category':
-            self.env['drug.service.create']._create_or_update_drug_category(vals)
         if category == "create.drug":
             self.env['drug.service.create']._create_or_update_drug(vals)
         if(category == "create.sale.order"):
@@ -33,12 +31,26 @@ class AtomEventWorker(models.Model):
         if(category == "create.radiology.test"):
             self.env['drug.service.create']._create_or_update_service(vals, 'Radiology')
         if(category == "create.lab.test"):
-            self.env['lab.test.service']._create_or_update_service(vals, 'Test')
+            self.env['drug.service.create']._create_or_update_service(vals, 'Test')
         if(category == "create.lab.panel"):
-            self.env['lab.panel.service']._create_or_update_service(vals, 'Panel')
+            self.env['drug.service.create']._create_or_update_service(vals, 'Panel')
 
         self._create_or_update_marker(vals)
         return {'success': True}
+    
+    @api.model
+    def _update_marker(self,  feed_uri_for_last_read_entry, last_read_entry_id, marker_ids):
+        for marker_id in marker_ids:
+            marker = self.env['atom.feed.marker']
+            marker._update_marker(marker_id,last_read_entry_id, feed_uri_for_last_read_entry)
+
+
+    @api.model
+    def _create_marker(self, feed_uri_for_last_read_entry, last_read_entry_id, uid,feed_uri):
+        marker = {'feed_uri': feed_uri, 'last_read_entry_id': last_read_entry_id,
+                  'feed_uri_for_last_read_entry': feed_uri_for_last_read_entry}
+        self.env['atom.feed.marker'].create(marker)
+
 
     @api.model
     def _create_or_update_marker(self, vals):
@@ -57,7 +69,7 @@ class AtomEventWorker(models.Model):
 
         marker = self.env['atom.feed.marker'].search([('feed_uri', '=', feed_uri)],
                                                      limit=1)
-
+      
         if marker:
             self._update_marker(feed_uri_for_last_read_entry, last_read_entry_id, marker)
         else:
@@ -68,7 +80,8 @@ class AtomEventWorker(models.Model):
         patient_ref = vals.get("ref")
         customer_vals = self._get_customer_vals(vals)
         # removing null values, as while updating null values in write method will remove old values
-        for rec in customer_vals:
+
+        for rec in customer_vals.keys():
             if not customer_vals[rec]:
                 del customer_vals[rec]
         existing_customer = self.env['res.partner'].search([('ref', '=', patient_ref)])
@@ -111,6 +124,7 @@ class AtomEventWorker(models.Model):
                                                              'district_id': district.id if district else False,
                                                              'state_id': state.id if state else False})
             res.update({'tehsil_id': tehsil.id})
+	return res
 
     def _get_customer_vals(self, vals):
         res = {}
@@ -120,7 +134,7 @@ class AtomEventWorker(models.Model):
                     'uuid': vals.get('uuid')})
         address_data = vals.get('preferredAddress')
         # get validated address details
-        address_details = self._get_address_details(address_data)
+        address_details = self._get_address_details(json.loads(address_data))
         # update address details
         res.update(address_details)
         # update other details : for now there is only scope of updating contact.
