@@ -4,7 +4,6 @@ from odoo import models, fields, api
 
 class RoundingOff(models.Model):
     _name = 'rounding.off'
-    _auto = False   # this will not create table in DB for this class
 
     def round_off_value_to_nearest(self, value):
         round_off_by = self.env['ir.values'].get_default('sale.config.settings', 'round_off_by')
