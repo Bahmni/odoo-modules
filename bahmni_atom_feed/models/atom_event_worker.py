@@ -46,7 +46,7 @@ class AtomEventWorker(models.Model):
 
 
     @api.model
-    def _create_marker(self, feed_uri_for_last_read_entry, last_read_entry_id, uid,feed_uri):
+    def _create_marker(self, feed_uri_for_last_read_entry, last_read_entry_id, feed_uri):
         marker = {'feed_uri': feed_uri, 'last_read_entry_id': last_read_entry_id,
                   'feed_uri_for_last_read_entry': feed_uri_for_last_read_entry}
         self.env['atom.feed.marker'].create(marker)
