@@ -61,29 +61,29 @@ class OrderSaveService(models.Model):
         OrderTypeShopMap = self.env['order.type.shop.map']
         SaleShop = self.env['sale.shop']
         if (location_name):
-            shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', orderType), ('location_name', '=', location_name)])
+            order_type_rocord = self.env['order.type'].search([('name','=',orderType)])
+            _logger.info("\n\n*****order_type_rocord=%s",order_type_rocord)			
+            shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_name', '=', location_name)])
             _logger.info("shop_list_with_orderType %s",shop_list_with_orderType)
-            #_logger.info("shop_list_with_orderType %s",shop_list_with_orderType[0])
-            #_logger.info("Len of shop_list_with_orderType  %s", len(shop_list_with_orderType))
             if not shop_list_with_orderType:
-                shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', orderType), ('location_name', '=', None)])
+                shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_name', '=', 	None)])
+                _logger.info(" if not shop_list_with_orderType %s",shop_list_with_orderType)
                 if not shop_list_with_orderType:
                     return (False, False)
-                else:
-                    _logger.info("In First ELSE.....shop_list_with_orderType %s", shop_list_with_orderType)
-                    order_type_map_object = shop_list_with_orderType[0]
-                    if order_type_map_object.shop_id:
-                        shop_id = order_type_map_object.shop_id.id
-                    else:
-                        shop_records = SaleShop.search(cr, uid, [], context=context)
-                        first_shop = shop_records[0]
-                        shop_id = first_shop.id
+            _logger.info("Final.....shop_list_with_orderType %s", shop_list_with_orderType)
+            order_type_map_object = shop_list_with_orderType[0]
+            if order_type_map_object.shop_id:
+                shop_id = order_type_map_object.shop_id.id
+            else:
+                shop_records = SaleShop.search([])
+                first_shop = shop_records[0]
+                shop_id = first_shop.id
 
-                    if order_type_map_object.local_shop_id:
-                        local_shop_id = order_type_map_object.local_shop_id.id
-                    else:
-                        local_shop_id = False
-                    return (shop_id, local_shop_id)
+            if order_type_map_object.local_shop_id:
+                local_shop_id = order_type_map_object.local_shop_id.id
+            else:
+                local_shop_id = False
+            return (shop_id, local_shop_id)
         return (False, False)
 
 
