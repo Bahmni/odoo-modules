@@ -15,7 +15,7 @@ class ProductCategory(models.Model):
         return super(ProductCategory, self).create(vals)
 
 # need to override this method to reverse sync updated data
-    @api.multi
-    def write(self, vals):
-        self.ensure_one()
-        return super(ProductCategory, self).create(vals)
+#    @api.multi
+#    def write(self, vals):
+#        self.ensure_one()
+#        return super(ProductCategory, self).create(vals)
