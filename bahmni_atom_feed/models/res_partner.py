@@ -14,6 +14,7 @@ class ResPartner(models.Model):
     district_id = fields.Many2one('state.district', string="District")
     local_name = fields.Char(string="Local Name")
     uuid = fields.Char(string = "UUID")
+    attribute_ids = fields.One2many('res.partner.attributes', 'partner_id', string='Attributes')
 
 
     # inherited to update display name w.r.t. ref field 
@@ -68,4 +69,11 @@ class ResPartner(models.Model):
                                'state_id': [],
                                'district_id': [],
                                'country_id': []}}
+
+class ResPartnerAttributes(models.Model):
+    _name = 'res.partner.attributes'
+    
+    partner_id = fields.Many2one('res.partner', string='Partner', required=True, index=True, readonly=False)
+    name = fields.Char(string='Name', size=128, required=True)
+    value = fields.Char(string='Value', size=128, required=False)
             
