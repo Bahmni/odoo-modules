@@ -21,6 +21,9 @@
 				<field name="mrp" invisible="not context.get('only_create', False)"/>
 				<field name="expiry_date"/>
 			</xpath>
+			<xpath expr="//field[@name='pack_lot_ids']/tree/field[@name='qty']" position="replace">
+				<field name="qty" />
+			</xpath>
 		</field>
 	</record>
 	
