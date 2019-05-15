@@ -23,15 +23,15 @@ class StockPackOperation(models.Model):
         # Create a picking and click on the Mark as TODO button to display the Lot Split icon. A window will pop-up. Click on Add an item and fill in the serial numbers and click on save button
         for pack in self:
             if pack.product_id.tracking != 'none':
-                mrp = pack.linked_move_operation_ids[0].move_id.purchase_line_id.mrp
-                unit_price = pack.linked_move_operation_ids[0].move_id.purchase_line_id.price_unit
+                #mrp = pack.linked_move_operation_ids[0].move_id.purchase_line_id.mrp
+                #unit_price = pack.linked_move_operation_ids[0].move_id.purchase_line_id.price_unit
                 for lot in pack.pack_lot_ids:
                     if lot.expiry_date and lot.lot_id:
                         lot.lot_id.life_date = lot.expiry_date
                         lot.lot_id.use_date = lot.expiry_date
-                    lot.lot_id.mrp = mrp
-                    lot.lot_id.cost_price = unit_price
-                    lot.lot_id.sale_price = unit_price
+                    #lot.lot_id.mrp = mrp
+                    #lot.lot_id.cost_price = unit_price
+                    #lot.lot_id.sale_price = unit_price
                     #life_date = datetime.strptime(lot.lot_id.life_date, DTF)
                     #if life_date < datetime.today():
                         #raise Warning("Lot %s is expired, you can process expired lot!"%(lot.lot_id.name))
