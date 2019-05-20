@@ -9,3 +9,4 @@ access_order_save_service,access_order_save_service,model_order_save_service,,1,
 access_drug_service_create,access_drug_service_create,model_drug_service_create,,1,1,1,1
 access_atom_event_worker,access_atom_event_worker,model_atom_event_worker,base.group_user,,1,1,1,1
 access_product_uom_service,access_product_uom_service,model_product_uom_service,,1,1,1,1
+access_res_partner_attributes,access_res_partner_attributes,model_res_partner_attributes,base.group_user,1,1,1,1
