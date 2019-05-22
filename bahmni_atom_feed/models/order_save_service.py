@@ -172,6 +172,7 @@ class OrderSaveService(models.Model):
                                            'state': 'draft',
                                            'dispensed': dispensed,
                                            'shop_id' : shop_id,
+                                           'origin' : 'ATOMFEED SYNC',
                                            }
                         sale_order = self.env['sale.order'].create(sale_order_vals)
                         for rec in unprocessed_non_dispensed_order:
@@ -190,7 +191,7 @@ class OrderSaveService(models.Model):
 
                     sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id.id),
                                                                                   ('location_id', '=', unprocessed_non_dispensed_order[0]['location_id']),
-                                                                                  ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')])
+                                                                                  ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC'),('dispensed','=',True)])
 
                     if(len(sale_order_ids_for_dispensed) > 0):
                         if(sale_order_ids_for_dispensed[0]):
@@ -207,7 +208,7 @@ class OrderSaveService(models.Model):
 
                     sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id),
                                                                                   ('location_id', '=', unprocessed_dispensed_order[0]['location_id']),
-                                                                                  ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC')])
+                                                                                  ('state', '=', 'draft'), ('origin', '=', 'ATOMFEED SYNC'),('dispensed','=',True)])
 
                     if(not sale_order_ids_for_dispensed):
                         #Remove existing sale order line
@@ -232,6 +233,7 @@ class OrderSaveService(models.Model):
                                            'state': 'draft',
                                            'dispensed': dispensed,
                                            'shop_id' : shop_id,
+                                           'origin' : 'ATOMFEED SYNC',
                                            }
 
                         sale_order = self.env['sale.order'].create(sale_order_vals)
