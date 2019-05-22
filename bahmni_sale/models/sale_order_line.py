@@ -42,7 +42,7 @@ class SaleOrderLine(models.Model):
                  ('id', 'not in', already_used_batch_ids)]\
                  if len(already_used_batch_ids) > 0 else [('product_id','=',product_id)]
         for prodlot in stock_prod_lot.with_context(context).search(query):
-            if(prodlot.life_date and datetime.strptime(prodlot.life_date, DTF) >= datetime.today() and prodlot.future_stock_forecast > 0):
+            if(prodlot.life_date and datetime.strptime(prodlot.life_date, DTF) >= datetime.today() and prodlot.stock_forecast > 0):
                 return prodlot
         return None
     

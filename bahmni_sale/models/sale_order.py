@@ -30,10 +30,10 @@ class SaleOrder(models.Model):
                 else:
                     amount_tax += line.price_tax
             amount_total = amount_untaxed + amount_tax
-            if self.chargeable_amount > 0.0:
-                discount = amount_total - self.chargeable_amount
+            if order.chargeable_amount > 0.0:
+                discount = amount_total - order.chargeable_amount
             else:
-                discount = self.discount
+                discount = order.discount
             amount_total = amount_total - discount
             round_off_amount = self.env['rounding.off'].round_off_value_to_nearest(amount_total)
             order.update({
