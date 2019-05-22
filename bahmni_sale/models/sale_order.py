@@ -268,6 +268,49 @@ class SaleOrder(models.Model):
                 account_payment = account_payment_env.create(default_fields)
                 account_payment.post()
         return res
+    #By Pass the Invoice wizard while we press the "Create Invoice" button in sale order afer confirmation.
+    #So Once we Confirm the sale order it will create the invoice and ask for the register payment.
+    @api.multi
+    def action_confirm(self):
+        res = super(SaleOrder,self).action_confirm()
+        #here we need to set condition for if the its enabled then can continuw owise return True in else condition
+        if self.env.user.has_group('bahmni_sale.group_skip_invoice_options'):
+            for order in self:
+                inv_data = order._prepare_invoice()
+                created_invoice = self.env['account.invoice'].create(inv_data)
+
+                for line in order.order_line:
+                    line.invoice_line_create(created_invoice.id, line.product_uom_qty)
+
+                # Use additional field helper function (for account extensions)
+                for line in created_invoice.invoice_line_ids:
+                    line._set_additional_fields(created_invoice)
+
+                # Necessary to force computation of taxes. In account_invoice, they are triggered
+                # by onchanges, which are not triggered when doing a create.
+                created_invoice.compute_taxes()
+                created_invoice.message_post_with_view('mail.message_origin_link',
+                    values={'self': created_invoice, 'origin': order},
+                    subtype_id=self.env.ref('mail.mt_note').id)
+                created_invoice.action_invoice_open()#Validate Invoice
+                ctx = dict(
+                default_invoice_ids = [(4, created_invoice.id, None)]
+                )
+                reg_pay_form = self.env.ref('account.view_account_payment_invoice_form')
+                return {
+                    'name': _('Register Payment'),
+                    'type': 'ir.actions.act_window',
+                    'view_type': 'form',
+                    'view_mode': 'form',
+                    'res_model': 'account.payment',
+                    'views': [(reg_pay_form.id, 'form')],
+                    'view_id': reg_pay_form.id,
+                    'target': 'new',
+                    'context': ctx,
+                }
+        else:
+            return res
+
 class SaleShop(models.Model):
     _name = "sale.shop"
     _description = "Sales Shop"
