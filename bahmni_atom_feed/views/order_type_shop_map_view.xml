@@ -12,7 +12,7 @@
 				<field name="order_type"/>
 				<field name="shop_id"/>
 				<field name="local_shop_id"/>
-				<field name="location_name"/>
+				<field name="location_id"/>
             </group>
 		 </sheet>
             </form>
@@ -28,7 +28,7 @@
                 <field name="order_type"/>
                 <field name="shop_id"/>
                 <field name="local_shop_id"/>
-                <field name="location_name"/>
+                <field name="location_id"/>
             </tree>
         </field>
     </record>
@@ -41,7 +41,7 @@
                 <field name="order_type"/>
                 <field name="shop_id"/>
                 <field name="local_shop_id"/>
-                <field name="location_name"/>
+                <field name="location_id"/>
             </search>
         </field>
     </record>
