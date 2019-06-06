@@ -62,15 +62,12 @@ class OrderSaveService(models.Model):
         SaleShop = self.env['sale.shop']
         if (location_name):
             order_type_rocord = self.env['order.type'].search([('name','=',orderType)])
-            location_rocord = self.env['stock.location'].search([('name','=',location_name)])
             _logger.info("\n\n*****order_type_rocord=%s",order_type_rocord)	
-            _logger.info("\n\n*****location_rocord=%s",location_rocord)
             shop_list_with_orderType = None
-            if any(location_rocord):		
-                shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_id', '=', location_rocord.id)])
+            shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_name', '=', location_name)])
             _logger.info("shop_list_with_orderType %s",shop_list_with_orderType)
             if not shop_list_with_orderType:
-                shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_id', '=', 	None)])
+                shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_name', '=', 	None)])
                 _logger.info(" if not shop_list_with_orderType %s",shop_list_with_orderType)
                 if not shop_list_with_orderType:
                     return (False, False)
