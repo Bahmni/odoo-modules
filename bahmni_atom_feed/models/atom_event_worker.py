@@ -147,9 +147,12 @@ class AtomEventWorker(models.Model):
     def _create_or_update_person_attributes(self, cust_id, vals):#TODO whole method
         attributes = json.loads(vals.get("attributes", "{}"))
         for key in attributes:
-            column_dict = {'partner_id': cust_id}
-            existing_attribute = self.env['res.partner.attributes'].search([('partner_id' , '=', cust_id),('name', '=', key)])
-            if any(existing_attribute):
-                existing_attribute.unlink()
-            column_dict.update({"name": key, "value" : attributes[key]})
-            self.env['res.partner.attributes'].create(column_dict)
+            openmrs_attributes_rec = self.env.ref('bahmni_atom_feed.openmrs_patient_attributes')
+            openmrs_attributes_list = str(openmrs_attributes_rec.value).split(',')
+            if key in openmrs_attributes_list:
+                column_dict = {'partner_id': cust_id}
+                existing_attribute = self.env['res.partner.attributes'].search([('partner_id' , '=', cust_id),('name', '=', key)])
+                if any(existing_attribute):
+                    existing_attribute.unlink()
+                column_dict.update({"name": key, "value" : attributes[key]})
+                self.env['res.partner.attributes'].create(column_dict)
