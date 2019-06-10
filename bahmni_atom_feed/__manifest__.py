@@ -13,6 +13,7 @@ Bahmni Web Extension
     'images': [],
     'depends': ['web', 'bahmni_product', 'bahmni_sale'],
     'data': ['security/ir.model.access.csv',
+         'data/mrs_person_attributes_data.xml',
 	     'views/event_records_view.xml',
              'views/res_partner_view.xml',
              'views/res_company.xml',
