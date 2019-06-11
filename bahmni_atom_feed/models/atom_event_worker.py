@@ -16,27 +16,32 @@ class AtomEventWorker(models.Model):
         _logger.info(vals)
         category = vals.get("category")
 #         patient_ref = vals.get("ref")
-        if(category == "create.customer"):
-            self._create_or_update_customer(vals)
-        if category == "create.drug":
-            self.env['drug.service.create']._create_or_update_drug(vals)
-        if(category == "create.sale.order"):
-            self.env['order.save.service'].create_orders(vals)
-        if (category == 'create.drug.category'):
-            self.env['drug.service.create']._create_or_update_drug_category(vals)
-        if (category == 'create.drug.uom'):
-            self.env['product.uom.service']._create_or_update_uom(vals)
-        if (category == 'create.drug.uom.category'):
-            self.env['product.uom.service']._create_or_update_uom_category(vals)
-        if(category == "create.radiology.test"):
-            self.env['drug.service.create']._create_or_update_service(vals, 'Radiology')
-        if(category == "create.lab.test"):
-            self.env['drug.service.create']._create_or_update_service(vals, 'Test')
-        if(category == "create.lab.panel"):
-            self.env['drug.service.create']._create_or_update_service(vals, 'Panel')
+        try:
+            if(category == "create.customer"):
+                self._create_or_update_customer(vals)
+            if category == "create.drug":
+                self.env['drug.service.create']._create_or_update_drug(vals)
+            if(category == "create.sale.order"):
+                self.env['order.save.service'].create_orders(vals)
+            if (category == 'create.drug.category'):
+                self.env['drug.service.create']._create_or_update_drug_category(vals)
+            if (category == 'create.drug.uom'):
+                self.env['product.uom.service']._create_or_update_uom(vals)
+            if (category == 'create.drug.uom.category'):
+                self.env['product.uom.service']._create_or_update_uom_category(vals)
+            if(category == "create.radiology.test"):
+                self.env['drug.service.create']._create_or_update_service(vals, 'Radiology')
+            if(category == "create.lab.test"):
+                self.env['drug.service.create']._create_or_update_service(vals, 'Test')
+            if(category == "create.lab.panel"):
+                self.env['drug.service.create']._create_or_update_service(vals, 'Panel')
 
-        self._create_or_update_marker(vals)
-        return {'success': True}
+            return {'success': True}    
+        except Exception as err:
+            _logger.info("\n Processing event threw error: %s", err)
+            raise
+        # self._create_or_update_marker(vals)
+        # return {'success': True}
     
     @api.model
     def _update_marker(self,  feed_uri_for_last_read_entry, last_read_entry_id, marker_ids):

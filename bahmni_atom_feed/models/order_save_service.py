@@ -54,39 +54,42 @@ class OrderSaveService(models.Model):
 
        
     @api.model 
-    def _get_shop_and_local_shop_id(self, orderType, location_name):
+    def _get_shop_and_local_shop_id(self, orderType, location_name, order_type_rocord):
         _logger.info("\n\n _get_shop_and_local_shop_id().... Called.....")
         _logger.info("orderType %s",orderType)
         _logger.info("location_name %s",location_name)
         OrderTypeShopMap = self.env['order.type.shop.map']
         SaleShop = self.env['sale.shop']
+        shop_list_with_orderType = None
         if (location_name):
-            order_type_rocord = self.env['order.type'].search([('name','=',orderType)])
-            _logger.info("\n\n*****order_type_rocord=%s",order_type_rocord)	
-            shop_list_with_orderType = None
             shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_name', '=', location_name)])
-            _logger.info("shop_list_with_orderType %s",shop_list_with_orderType)
-            if not shop_list_with_orderType:
-                shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_name', '=', 	None)])
-                _logger.info(" if not shop_list_with_orderType %s",shop_list_with_orderType)
-                if not shop_list_with_orderType:
-                    return (False, False)
-            _logger.info("Final.....shop_list_with_orderType %s", shop_list_with_orderType)
-            order_type_map_object = shop_list_with_orderType[0]
-            if order_type_map_object.shop_id:
-                shop_id = order_type_map_object.shop_id.id
-            else:
-                shop_records = SaleShop.search([])
-                first_shop = shop_records[0]
-                shop_id = first_shop.id
+            _logger.info("\nFor specified order location name [%s], shop_list_with_orderType : %s", location_name, shop_list_with_orderType)
+        
+        if (not shop_list_with_orderType):
+            _logger.info("\nCouldn't identify OrderType-Shop mapping for specified order location name [%s], searching for default OrderType-Shop map", location_name)
+            shop_list_with_orderType = OrderTypeShopMap.search([('order_type', '=', order_type_rocord.id), ('location_name', '=',   None)])
+            _logger.info("\nOrderType-Shop mappings without order location name specified : %s", shop_list_with_orderType)
 
-            if order_type_map_object.local_shop_id:
-                local_shop_id = order_type_map_object.local_shop_id.id
-            else:
-                local_shop_id = False
-            return (shop_id, local_shop_id)
-        return (False, False)
+        if (not shop_list_with_orderType):
+            _logger.info("\nCouldn't identify OrderType-Shop mapping for Order Type [%s]", orderType)
+            return (False, False)    
 
+        order_shop_map_object = shop_list_with_orderType[0]
+        _logger.info("Identified Order Shop mapping %s", order_shop_map_object)    
+        if order_shop_map_object.shop_id:
+            shop_id = order_shop_map_object.shop_id.id
+        else:
+            shop_records = SaleShop.search([])
+            first_shop = shop_records[0]
+            shop_id = first_shop.id
+
+        if order_shop_map_object.local_shop_id:
+            local_shop_id = order_shop_map_object.local_shop_id.id
+        else:
+            local_shop_id = False
+
+        _logger.info("\n _get_shop_and_local_shop_id() Returing  shop_id: %s, local_shop_id: %s", shop_id, local_shop_id)
+        return (shop_id, local_shop_id)
 
 
     @api.model
@@ -104,17 +107,25 @@ class OrderSaveService(models.Model):
 
             for orderType, ordersGroup in groupby(all_orders, lambda order: order.get('type')):
 
+                order_type_def = self.env['order.type'].search([('name','=',orderType)])
+                if (not order_type_def):
+                    _logger.info("\nOrder Type is not defined. Ignoring %s for Customer %s",orderType,cus_id)
+                    continue
+
                 orders = list(ordersGroup)
                 care_setting = orders[0].get('visitType').lower()
                 provider_name = orders[0].get('providerName')
                 # will return order line data for products which exists in the system, either with productID passed or with conceptName
                 unprocessed_orders = self._filter_processed_orders(orders)
-                tup = self._get_shop_and_local_shop_id(orderType, location_name)
+                tup = self._get_shop_and_local_shop_id(orderType, location_name, order_type_def)
                 shop_id = tup[0]
                 local_shop_id = tup[1]
 
                 if (not shop_id):
-                    continue
+                    err_message = "Can not process order. Order type:{} - should be matched to a shop".format(orderType)
+                    _logger.info(err_message)
+                    raise Warning(err_message)
+                    
                 # instead of shop_id, warehouse_id is needed.
                 # in case of odoo 10, warehouse_id is required for creating order, not shop
                 # with each stock_picking_type, a warehouse id is linked.
