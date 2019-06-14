@@ -17,32 +17,30 @@ class AtomEventWorker(models.Model):
         category = vals.get("category")
 #         patient_ref = vals.get("ref")
         try:
-            if(category == "create.customer"):
+            if category == "create.customer":
                 self._create_or_update_customer(vals)
-            if category == "create.drug":
-                self.env['drug.service.create']._create_or_update_drug(vals)
-            if(category == "create.sale.order"):
+            elif category == "create.drug":
+                self.env['drug.data.service'].create_or_update_drug(vals)
+            elif category == "create.sale.order":
                 self.env['order.save.service'].create_orders(vals)
-            if (category == 'create.drug.category'):
-                self.env['drug.service.create']._create_or_update_drug_category(vals)
-            if (category == 'create.drug.uom'):
-                self.env['product.uom.service']._create_or_update_uom(vals)
-            if (category == 'create.drug.uom.category'):
-                self.env['product.uom.service']._create_or_update_uom_category(vals)
-            if(category == "create.radiology.test"):
-                self.env['drug.service.create']._create_or_update_service(vals, 'Radiology')
-            if(category == "create.lab.test"):
-                self.env['drug.service.create']._create_or_update_service(vals, 'Test')
-            if(category == "create.lab.panel"):
-                self.env['drug.service.create']._create_or_update_service(vals, 'Panel')
+            elif category == 'create.drug.category':
+                self.env['drug.data.service'].create_or_update_drug_category(vals)
+            elif category == 'create.drug.uom':
+                self.env['product.uom.service'].create_or_update_product_uom(vals)
+            elif category == 'create.drug.uom.category':
+                self.env['product.uom.service'].create_or_update_product_uom_category(vals)
+            elif category == "create.radiology.test":
+                self.env['reference.data.service'].create_or_update_ref_data(vals, 'Radiology')
+            elif category == "create.lab.test":
+                self.env['reference.data.service'].create_or_update_ref_data(vals, 'Test')
+            elif category == "create.lab.panel":
+                self.env['reference.data.service'].create_or_update_ref_data(vals, 'Panel')
 
             return {'success': True}    
         except Exception as err:
             _logger.info("\n Processing event threw error: %s", err)
             raise
-        # self._create_or_update_marker(vals)
-        # return {'success': True}
-    
+
     @api.model
     def _update_marker(self,  feed_uri_for_last_read_entry, last_read_entry_id, marker_ids):
         for marker_id in marker_ids:
@@ -61,7 +59,7 @@ class AtomEventWorker(models.Model):
     def _create_or_update_marker(self, vals):
         '''Method to Create or Update entries for markers table for the event taking place'''
         is_failed_event = vals.get('is_failed_event',False)
-        if(is_failed_event):
+        if is_failed_event:
             return
 
         last_read_entry_id = vals.get('last_read_entry_id')
