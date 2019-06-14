@@ -131,7 +131,7 @@ class AtomEventWorker(models.Model):
                                                              'district_id': district.id if district else False,
                                                              'state_id': state.id if state else False})
             res.update({'tehsil_id': tehsil.id})
-	return res
+        return res
 
     def _get_customer_vals(self, vals):
         res = {}
@@ -151,12 +151,13 @@ class AtomEventWorker(models.Model):
         
     def _create_or_update_person_attributes(self, cust_id, vals):#TODO whole method
         attributes = json.loads(vals.get("attributes", "{}"))
+        openmrs_attributes_rec = self.env.ref('bahmni_atom_feed.openmrs_patient_attributes')
+        openmrs_attributes_list = str(openmrs_attributes_rec.value).split(',')
+        _logger.info("\n List of Patient Attributes to Sync = %s", openmrs_attributes_list)
         for key in attributes:
-            openmrs_attributes_rec = self.env.ref('bahmni_atom_feed.openmrs_patient_attributes')
-            openmrs_attributes_list = str(openmrs_attributes_rec.value).split(',')
             if key in openmrs_attributes_list:
                 column_dict = {'partner_id': cust_id}
-                existing_attribute = self.env['res.partner.attributes'].search([('partner_id' , '=', cust_id),('name', '=', key)])
+                existing_attribute = self.env['res.partner.attributes'].search([('partner_id', '=', cust_id),('name', '=', key)])
                 if any(existing_attribute):
                     existing_attribute.unlink()
                 column_dict.update({"name": key, "value" : attributes[key]})
