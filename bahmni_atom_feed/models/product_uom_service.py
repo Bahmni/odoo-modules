@@ -37,8 +37,7 @@ class ProductUomService(models.Model):
     @api.model
     def create_or_update_product_uom(self, vals):
         product_uom = json.loads(vals.get("product_uom"))
-        object_ids = self.env["product.uom"].with_context({"active_test":False}).search([('uuid', '=', product_uom.get("id"))],
-                                                                                        limit=1)
+        object_ids = self.env["product.uom"].with_context({"active_test": False}).search([('uuid', '=', product_uom.get("id"))], limit=1)
         uom = self._fill_product_uom(product_uom)
 
         if object_ids:
