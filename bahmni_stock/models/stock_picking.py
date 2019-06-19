@@ -161,14 +161,3 @@ class StockPicking(models.Model):
             if any(sale_order) and sale_order.location_id:
                 picking_obj.location_id = sale_order.location_id.id
         return picking_obj
-        
-class StockMove(models.Model):
-    _inherit = 'stock.move'
-    @api.model
-    def create(self,vals):
-        if vals.get('origin'):
-            sale_order = self.env['sale.order'].search([('name','=',str(vals.get('origin')))])
-            if any(sale_order) and sale_order.location_id:
-                vals.update({'location_id':sale_order.location_id.id})
-        return super(StockMove,self).create(vals)
-        
