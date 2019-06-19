@@ -18,7 +18,7 @@ Bahmni Web Extension
              'views/res_partner_view.xml',
              'views/res_company.xml',
              'wizard/stock_location_product_dhis2.xml',
-             'views/order_picking_type_mapping_view.xml',
+             'views/order_type_view.xml',
              'views/syncable_units_view.xml',
              'views/order_type_shop_map_view.xml',
              'views/res_users_view.xml',

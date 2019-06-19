@@ -205,6 +205,16 @@ as discount fields are readonly in case of chargable amount is editable-->
 		</field>
 	</record>
 
+    <record id="bahmni_view_order_form_inherit_sale_stock" model="ir.ui.view">
+		<field name="name">bahmni.sale.order.form.sale.stock</field>
+		<field name="model">sale.order</field>
+		<field name="inherit_id" ref="sale_stock.view_order_form_inherit_sale_stock"/>
+		<field name="arch" type="xml">
+			<xpath expr="//field[@name='warehouse_id']" position="after">
+				<field name="location_id"/>
+			</xpath>
+		</field>
+	</record>
 
 	<record id="view_shop_form" model="ir.ui.view">
 		<field name="name">sale.shop</field>
@@ -216,6 +226,9 @@ as discount fields are readonly in case of chargable amount is editable-->
 
 				<label for="warehouse_id" class="oe_edit_only"/>
 				<h2><field name="warehouse_id" required="1"/></h2>
+				
+				<label for="location_id" class="oe_edit_only"/>
+				<h2><field name="location_id" required="1"/></h2>
 
 				<group name="shop">
 					<group>
@@ -238,6 +251,8 @@ as discount fields are readonly in case of chargable amount is editable-->
 		<field name="arch" type="xml">
 			<tree string="Sales Shop">
 				<field name="name"/>
+				<field name="warehouse_id"/>
+				<field name="location_id"/>
 				<field name="pricelist_id" groups="product.group_sale_pricelist"/>
 				<field name="project_id" groups="analytic.group_analytic_accounting"/>
 			</tree>

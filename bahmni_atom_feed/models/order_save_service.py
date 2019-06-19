@@ -52,8 +52,8 @@ class OrderSaveService(models.Model):
 
        
     @api.model 
-    def _get_shop_and_local_shop_id(self, orderType, location_name, order_type_record):
-        _logger.info("\n _get_shop_and_local_shop_id().... Called.....")
+    def _get_shop_and_location_id(self, orderType, location_name, order_type_record):
+        _logger.info("\n _get_shop_and_location_id().... Called.....")
         _logger.info("orderType %s",orderType)
         _logger.info("location_name %s", location_name)
         OrderTypeShopMap = self.env['order.type.shop.map']
@@ -86,13 +86,13 @@ class OrderSaveService(models.Model):
             first_shop = shop_records[0]
             shop_id = first_shop.id
 
-        if order_shop_map_object.local_shop_id:
-            local_shop_id = order_shop_map_object.local_shop_id.id
+        if order_shop_map_object.location_id:
+            location_id = order_shop_map_object.location_id.id
         else:
-            local_shop_id = False
+            location_id = SaleShop.search([('id','=',shop_id)]).location_id.id
 
-        _logger.info("\n_get_shop_and_local_shop_id() returning shop_id: %s, local_shop_id: %s", shop_id, local_shop_id)
-        return shop_id, local_shop_id
+        _logger.info("\n__get_shop_and_location_id() returning shop_id: %s, location_id: %s", shop_id, location_id)
+        return shop_id, location_id
 
 
     @api.model
@@ -121,9 +121,9 @@ class OrderSaveService(models.Model):
                 # will return order line data for products which exists in the system, either with productID passed
                 # or with conceptName
                 unprocessed_orders = self._filter_processed_orders(orders)
-                tup = self._get_shop_and_local_shop_id(orderType, location_name, order_type_def)
+                tup = self._get_shop_and_location_id(orderType, location_name, order_type_def)
                 shop_id = tup[0]
-                local_shop_id = tup[1]
+                location_id = tup[1]
 
                 if (not shop_id):
                     err_message = "Can not process order. Order type:{} - should be matched to a shop".format(orderType)
@@ -139,26 +139,17 @@ class OrderSaveService(models.Model):
                 # will search for picking type whose source location is same as passed location, and it's linked warehouse will get passed to the order.
                 # else will look for warehouse, whose stock location is as per the location name
                 # without warehouse id, order cannot be created
-                location = self.env['stock.location'].search([('name', '=', location_name)], limit=1)
-                if not location:
-                   location = self.env['stock.location'].create({'name':location_name})
-                if not location:
-                    _logger.warning("No location found with name: %s"%(location_name))
-                warehouse_id = self._get_warehouse_id(location, order_type_def)
-                if not warehouse_id:
-                    #self.env['stock.warehouse'].create({'name':,'code':})
-                    operation_type = self.env['stock.picking.type'].search([('name', '=', 'Delivery Orders')],
-                                                                        limit=1)
-                    warehouse_id = operation_type.warehouse_id.id
-                _logger.info("!!!!!!!!!!!!!!!WAREHOUSE!!!!!!!!!!!!!!!!!!!!!")
-                _logger.info(warehouse_id)
+                
+                shop_obj = self.env['sale.shop'].search([('id','=',shop_id)])
+                warehouse_id = shop_obj.warehouse_id.id
+                _logger.warning("warehouse_id: %s"%(warehouse_id))
 
                 name = self.env['ir.sequence'].next_by_code('sale.order')
                 #Adding both the ids to the unprocessed array of orders, Separating to dispensed and non-dispensed orders
                 unprocessed_dispensed_order = []
                 unprocessed_non_dispensed_order = []
                 for unprocessed_order in unprocessed_orders:
-                    unprocessed_order['location_id'] = location.id
+                    unprocessed_order['location_id'] = location_id
                     unprocessed_order['warehouse_id'] = warehouse_id
                     if(unprocessed_order.get('dispensed', 'false') == 'true'):
                         unprocessed_dispensed_order.append(unprocessed_order)
@@ -184,12 +175,16 @@ class OrderSaveService(models.Model):
                                            'provider_name': provider_name,
                                            'date_order': datetime.strftime(datetime.now(), DTF),
                                            'pricelist_id': cus_id.property_product_pricelist and cus_id.property_product_pricelist.id or False,
+                                           'payment_term_id': shop_obj.payment_default_id.id,
+                                           'project_id': shop_obj.project_id.id if shop_obj.project_id else False,
                                            'picking_policy': 'direct',
                                            'state': 'draft',
                                            'dispensed': dispensed,
                                            'shop_id' : shop_id,
                                            'origin' : 'ATOMFEED SYNC',
                                            }
+                        if shop_obj.pricelist_id:
+                            sale_order_vals.update({'pricelist_id': shop_obj.pricelist_id.id})
                         sale_order = self.env['sale.order'].create(sale_order_vals)
                         for rec in unprocessed_non_dispensed_order:
                             self._process_orders(sale_order, unprocessed_non_dispensed_order, rec)
@@ -245,13 +240,16 @@ class OrderSaveService(models.Model):
                                            'provider_name': provider_name,
                                            'date_order': datetime.strftime(datetime.now(), DTF),
                                            'pricelist_id': cus_id.property_product_pricelist and cus_id.property_product_pricelist.id or False,
+                                           'payment_term_id': shop_obj.payment_default_id.id,
+                                           'project_id': shop_obj.project_id.id if shop_obj.project_id else False,
                                            'picking_policy': 'direct',
                                            'state': 'draft',
                                            'dispensed': dispensed,
                                            'shop_id' : shop_id,
                                            'origin' : 'ATOMFEED SYNC',
                                            }
-
+                        if shop_obj.pricelist_id:
+                            sale_order_vals.update({'pricelist_id': shop_obj.pricelist_id.id})
                         sale_order = self.env['sale.order'].create(sale_order_vals)
 
 

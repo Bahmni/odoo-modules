@@ -152,3 +152,12 @@ class StockPicking(models.Model):
             values = product_id_to_vals.pop(move.product_id.id, [])
             pack_operation_values += values
         return pack_operation_values
+        
+    @api.model
+    def create(self,vals):
+        picking_obj = super(StockPicking,self).create(vals)
+        if picking_obj.origin:
+            sale_order = self.env['sale.order'].search([('name','=',str(picking_obj.origin))])
+            if any(sale_order) and sale_order.location_id:
+                picking_obj.location_id = sale_order.location_id.id
+        return picking_obj
