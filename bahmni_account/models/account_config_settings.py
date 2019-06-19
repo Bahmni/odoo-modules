@@ -15,12 +15,12 @@ class AccountConfigSettings(models.TransientModel):
             
     @api.model
     def get_default_validate_picking(self, fields):
-        value = int(self.env.ref('bahmni_account.validate_invoice_basedon_invoice').value)
+        value = int(self.env.ref('bahmni_account.validate_picking_basedon_invoice').value)
         return {'validate_picking': bool(value)}
 
     @api.multi
     def set_default_validate_picking(self):
         for record in self:
             value = 1 if record.validate_picking else 0
-            self.env.ref('bahmni_account.validate_invoice_basedon_invoice').write({'value': str(value)})
+            self.env.ref('bahmni_account.validate_picking_basedon_invoice').write({'value': str(value)})
 

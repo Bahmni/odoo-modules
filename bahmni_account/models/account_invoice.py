@@ -59,7 +59,7 @@ class AccountInvoice(models.Model):
     @api.model
     def create(self, vals):
         rec = super(AccountInvoice,self).create(vals)
-        if rec.origin and self.env.ref('bahmni_account.validate_invoice_basedon_invoice').value == '1':
+        if rec.origin and self.env.ref('bahmni_account.validate_picking_basedon_invoice').value == '1':
             sale_order = self.env['sale.order'].search([('name','=',rec.origin)])
             if any(sale_order) and len(sale_order.picking_ids):
                 for picking in sale_order.picking_ids:
