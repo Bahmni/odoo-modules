@@ -310,6 +310,14 @@ class SaleOrder(models.Model):
                 }
         else:
             return res
+    @api.onchange('shop_id')
+    def onchange_shop_id(self):
+        self.warehouse_id = self.shop_id.warehouse_id.id
+        self.location_id = self.shop_id.location_id.id
+        self.payment_term_id = self.shop_id.payment_default_id.id
+        self.project_id = self.shop_id.project_id.id if self.shop_id.project_id else False
+        if self.shop_id.pricelist_id:
+            self.pricelist_id = self.shop_id.pricelist_id.id
 
 class SaleShop(models.Model):
     _name = "sale.shop"
@@ -317,6 +325,7 @@ class SaleShop(models.Model):
 
     name = fields.Char('Shop Name', size=64, required=True)
     warehouse_id = fields.Many2one('stock.warehouse', 'Warehouse')
+    location_id = fields.Many2one('stock.location', 'Location')
     payment_default_id = fields.Many2one('account.payment.term', 'Default Payment Term', required=True)
     pricelist_id = fields.Many2one('product.pricelist', 'Pricelist')
     project_id = fields.Many2one('account.analytic.account', 'Analytic Account')#domain=[('parent_id', '!=', False)]
