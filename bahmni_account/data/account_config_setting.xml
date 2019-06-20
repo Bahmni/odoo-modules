@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+	<data noupdate="1">
+	    <record id="validate_picking_basedon_invoice" model="ir.config_parameter">
+                <field name="key">validate_picking_basedon_invoice</field>
+                <field name="value">0</field>
+        </record>
+	</data>
+</odoo>

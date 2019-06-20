@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import fields, models, api
-
+import logging
+_logger = logging.getLogger(__name__)
 
 class AccountInvoice(models.Model):
     _inherit = 'account.invoice'
@@ -54,3 +55,19 @@ class AccountInvoice(models.Model):
             self.discount_percentage = (self.discount / amount_total) * 100
         if self.discount_percentage:
             self.discount = amount_total * self.discount_percentage / 100
+            
+    @api.model
+    def create(self, vals):
+        rec = super(AccountInvoice,self).create(vals)
+        if rec.origin and self.env.ref('bahmni_account.validate_picking_basedon_invoice').value == '1':
+            sale_order = self.env['sale.order'].search([('name','=',rec.origin)])
+            if any(sale_order) and len(sale_order.picking_ids):
+                for picking in sale_order.picking_ids:
+                    picking.force_assign()#Force Available
+                    if any(picking.pack_operation_product_ids.filtered(lambda l:l.product_id.tracking != 'none')):
+                        _logger.info("\n\n\n*******One of product's configuration is set as Tracking with Unique Serial no or Lots so can't validate this %s Delivery Order.",picking.name)
+                        return rec
+                    for pack in picking.pack_operation_product_ids:
+                        pack.qty_done = pack.product_qty
+                    picking.do_new_transfer()#Validate
+        return rec

@@ -11,6 +11,9 @@
 					<label for="round_off_by"/>
 					<field name="round_off_by" nolabel="1"/>
 				</group>
+				<group>
+					<field name="validate_picking"/>
+				</group>
 			</xpath>
 		</field>
 	</record>
