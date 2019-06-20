@@ -364,8 +364,8 @@ class OrderSaveService(models.Model):
 
             order['quantity'] = self._get_order_quantity(order, default_quantity_value)
             product_uom_qty = order['quantity']
-            if(prod_lot != None and order['quantity'] > prod_lot.future_stock_forecast):
-                product_uom_qty = prod_lot.future_stock_forecast
+            if(prod_lot != None and order['quantity'] > prod_lot.stock_forecast):
+                product_uom_qty = prod_lot.stock_forecast
 
             sale_order_line = {
                 'product_id': prod_id,
@@ -387,7 +387,7 @@ class OrderSaveService(models.Model):
                 sale_order_line['price_unit'] = prod_lot.sale_price if prod_lot.sale_price > 0.0 else sale_order_line['price_unit']
                 sale_order_line['batch_name'] = prod_lot.name
                 sale_order_line['batch_id'] = prod_lot.id
-                sale_order_line['expiry_date'] = life_date and life_date.strftime('%d/%m/%Y')
+                sale_order_line['expiry_date'] = life_date and life_date.strftime(DTF)
 
             sale_order_line_obj.create(sale_order_line)
 

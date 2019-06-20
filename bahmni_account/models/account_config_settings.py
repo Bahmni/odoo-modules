@@ -6,7 +6,7 @@ class AccountConfigSettings(models.TransientModel):
     _inherit = 'account.config.settings'
 
     round_off_by = fields.Float(string="Round off by", related="company_id.round_off_by")
-    validate_picking = fields.Boolean(string="Validate Pickings when invoice is created",help="Product configuration must be Tacking='No Tracking' then this option will work")
+    validate_picking = fields.Boolean(string="Validate Pickings when invoice is created")
 
     @api.multi
     def set_round_off_by_defaults(self):
