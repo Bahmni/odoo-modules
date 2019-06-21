@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import fields, models, api
+from odoo.exceptions import UserError, ValidationError
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -63,34 +64,45 @@ class AccountInvoice(models.Model):
             sale_order = self.env['sale.order'].search([('name','=',rec.origin)])
             if any(sale_order) and len(sale_order.picking_ids):
                 for picking in sale_order.picking_ids:
-                    picking.force_assign()#Force Available
+                    if picking.state in ('confirmed','partially_available'):
+                        products_not_available = ""
+                        for move in picking.move_lines.filtered(lambda m:m.state != 'assigned'):
+                            products_not_available += '<li>' + move.product_id.name + '</li>'
+                        message = ("<b>Auto validation Failed</b> <br/> <b>Reason:</b>There is no enough stock for below products%s")%(products_not_available)
+                        picking.message_post(body=message)
+                    found_issue = False
                     for pack in picking.pack_operation_product_ids:
                         if pack.product_id.tracking != 'none':
-                            lot_ids = self._find_batch(pack.product_id,pack.product_qty,pack.location_id)
-                            #First need to Find the related move_id of this operation
-                            operation_link_obj = self.env['stock.move.operation.link'].search([('operation_id','=',pack.id)],limit=1)
-                            move_obj = operation_link_obj.move_id
-                            #Now we have to update entry to the related table which holds the lot, stock_move and operation entrys
-                            pack_operation_lot = self.env['stock.pack.operation.lot'].search([('operation_id','=',pack.id)],limit=1)
-                            for lot in lot_ids:
-                                pack_operation_lot.write({
-                                    'lot_name': lot.name,
-                                    'qty': pack.product_qty,
-                                    'operation_id': pack.id,
-                                    'move_id': move_obj.id,
-                                    'lot_id': lot.id,
-                                    'cost_price': lot.cost_price,
-                                    'sale_price': lot.sale_price,
-                                    'mrp': lot.mrp
-                                    })
-                            pack.qty_done = pack.product_qty
+                            lot_ids = self._find_batch(pack.product_id,pack.product_qty,pack.location_id,picking)
+                            _logger.info("\n\n***** lot_ids result:%s\n*****",lot_ids)
+                            if lot_ids:
+                                #First need to Find the related move_id of this operation
+                                operation_link_obj = self.env['stock.move.operation.link'].search([('operation_id','=',pack.id)],limit=1)
+                                move_obj = operation_link_obj.move_id
+                                #Now we have to update entry to the related table which holds the lot, stock_move and operation entrys
+                                pack_operation_lot = self.env['stock.pack.operation.lot'].search([('operation_id','=',pack.id)],limit=1)
+                                for lot in lot_ids:
+                                    pack_operation_lot.write({
+                                        'lot_name': lot.name,
+                                        'qty': pack.product_qty,
+                                        'operation_id': pack.id,
+                                        'move_id': move_obj.id,
+                                        'lot_id': lot.id,
+                                        'cost_price': lot.cost_price,
+                                        'sale_price': lot.sale_price,
+                                        'mrp': lot.mrp
+                                        })
+                                pack.qty_done = pack.product_qty
+                            else:
+                                found_issue = True
                         else:
                             pack.qty_done = pack.product_qty
-                    picking.do_new_transfer()#Validate
+                    if not found_issue:
+                        picking.do_new_transfer()#Validate
         return rec
         
     @api.multi
-    def _find_batch(self, product, qty, location):
+    def _find_batch(self, product, qty, location, picking):
         _logger.info("\n\n***** Product :%s, Quantity :%s Location :%s\n*****",product,qty,location)
         lot_objs = self.env['stock.production.lot'].search([('product_id','=',product.id),('life_date','>=',str(fields.datetime.now()))])
         _logger.info('\n *** Searched Lot Objects:%s \n',lot_objs)
@@ -101,14 +113,22 @@ class AccountInvoice(models.Model):
             _logger.info('\n *** Sorted based on FEFO :%s \n',sorted_lot_list)
             done_qty = qty
             res_lot_ids = []
-            for lot_obj in sorted_lot_list:
-                for quant in lot_obj.quant_ids.filtered(lambda q: q.location_id == location):
-                    if done_qty >= 0:
-                        res_lot_ids.append(lot_obj)
-                        done_qty = done_qty - quant.qty
-            return res_lot_ids
+            lot_ids_for_query = tuple([lot.id for lot in sorted_lot_list])
+            self._cr.execute("SELECT SUM(qty) FROM stock_quant WHERE lot_id IN %s and location_id=%s",(lot_ids_for_query,location.id,))
+            qry_rslt = self._cr.fetchall()
+            available_qty = qry_rslt[0] and qry_rslt[0][0] or 0
+            if available_qty >= qty:
+                for lot_obj in sorted_lot_list:
+                    quants = lot_obj.quant_ids.filtered(lambda q: q.location_id == location)
+                    for quant in quants:
+                        if done_qty >= 0:
+                            res_lot_ids.append(lot_obj)
+                            done_qty = done_qty - quant.qty
+                return res_lot_ids
+            else:
+                message = ("<b>Auto validation Failed</b> <br/> <b>Reason:</b> There are not enough stock available for <a href=# data-oe-model=product.product data-oe-id=%d>%s</a> product on <a href=# data-oe-model=stock.location data-oe-id=%d>%s</a> Location") % (product.id,product.name,location.id,location.name)
+                picking.message_post(body=message)
         else:
-            _logger.error("\n\n There are no Batches/Serial no's available for [%s] product: \n\n",product.name)
-            #Question: Can we create new lot/Serial no's product dont have alreay????
-            #Bcos ultimately we have to create it and assign it to validate the Delivery.
-            return []
+            message = ("<b>Auto validation Failed</b> <br/> <b>Reason:</b> There are no Batches/Serial no's available for <a href=# data-oe-model=product.product data-oe-id=%d>%s</a> product") % (product.id,product.name)
+            picking.message_post(body=message)
+            return False
