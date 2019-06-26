@@ -25,7 +25,7 @@ and in case user exactly don't know the position, he/she will need to search for
                 <field name="uuid" invisible = "1"/>
             </xpath>
             <xpath expr="//form/sheet/notebook" position="inside">
-                <page string="OpenMRS Person Attributes">
+                <page string="Additinal Info">
                     <field name="attribute_ids">
                       <tree name="Addition Info">
                          <field name="name"/>
