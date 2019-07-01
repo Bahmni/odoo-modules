@@ -45,7 +45,7 @@ class AccountPayment(models.Model):
         if not res.get('domain', {}):
             res['domain'] = {}
         res['domain']['journal_id'] = self.payment_type == 'inbound' and [('at_least_one_inbound', '=', True)] or self.payment_type == 'outbound' and [('at_least_one_outbound', '=', True)] or []
-        res['domain']['journal_id'].append(('type', '=', 'cash'))
+        #res['domain']['journal_id'].append(('type', '=', 'cash'))
         return res
 
     balance_before_pay = fields.Float(compute=_calculate_balances,
