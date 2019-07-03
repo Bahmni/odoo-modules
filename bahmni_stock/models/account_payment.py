@@ -45,7 +45,7 @@ class AccountPayment(models.Model):
         invoice_data['taxes'] = taxes
         invoice_data['amount_untaxed'] = amount_untaxed
         invoice_data['discount'] = discount
-        invoice_data['net_amount'] = invoice_data['taxes'] + invoice_data['amount_untaxed'] + invoice_data['discount']
+        invoice_data['net_amount'] = invoice_data['taxes'] + invoice_data['amount_untaxed'] - invoice_data['discount']
         invoice_data['previous_balance'] = self.partner_id.credit or self.partner_id.debit
         invoice_data['bill_amount'] = bill_amount
         invoice_data['paid_amount'] = self.amount
