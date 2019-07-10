@@ -113,13 +113,13 @@ class AtomEventWorker(models.Model):
                 state = self.env['res.country.state'].create({'name': address['stateProvince'],
                                                               'country_id': country.id})
             res.update({'state_id': state.id})
-        # TO FIX: for now, district is getting passed with country key from bahmni side.
-        if address.get('country'):
-            district = self.env['state.district'].search([('name', '=ilike', address['country'])])
+        if address.get('countyDistrict'):
+            district = self.env['state.district'].search([('name', '=ilike', address['countyDistrict'])])
             if not district:
-                district = self.env['state.district'].create({'name': address['country'],
+                district = self.env['state.district'].create({'name': address['countyDistrict'],
                                                               'state_id': state.id if state else state,
                                                               'country_id': country.id})
+            res.update({'district_id' : district.id})
         # for now, from bahmni side, Taluka is sent as address3
         if address.get('address3'):
             # =ilike operator will ignore the case of letters while comparing
