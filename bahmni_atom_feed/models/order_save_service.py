@@ -388,11 +388,19 @@ class OrderSaveService(models.Model):
                 sale_order_line['batch_name'] = prod_lot.name
                 sale_order_line['batch_id'] = prod_lot.id
                 sale_order_line['expiry_date'] = life_date and life_date.strftime(DTF)
+            
+            
+            sale_obj = self.env['sale.order'].browse(sale_order)
+            if sale_obj.shop_id.pricelist_id:
+                matched_pricelist_line = prod_obj.pricelist_item_ids.filtered(lambda l:l.pricelist_id == sale_obj.shop_id.pricelist_id)
+                if any(matched_pricelist_line):
+                    price = float(matched_pricelist_line.price.split(' ')[0])
+                    sale_order_line.update({'price_unit':price})
+                
 
             sale_order_line_obj.create(sale_order_line)
 
-            sale_order = self.env['sale.order'].browse(sale_order)
-
+            
             if product_uom_qty != order['quantity']:
                 order['quantity'] = order['quantity'] - product_uom_qty
                 self._create_sale_order_line_function(sale_order, order)
