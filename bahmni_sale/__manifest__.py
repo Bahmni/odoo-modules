@@ -15,6 +15,7 @@ Bahmni Sale
     'data': ['security/ir.model.access.csv',
              'security/security_groups.xml',
              'data/data.xml',
+             'data/sale_config_setting.xml',
              'views/bahmni_sale.xml',
              'views/village_master_view.xml',
              'views/sale_order_views.xml',

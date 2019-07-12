@@ -8,6 +8,9 @@ from odoo.tools import float_is_zero
 from odoo.exceptions import UserError
 from odoo.osv.orm import setup_modifiers
 from odoo.tools import pickle
+import logging
+_logger = logging.getLogger(__name__)
+
 
 
 class SaleOrder(models.Model):
@@ -273,6 +276,7 @@ class SaleOrder(models.Model):
     @api.multi
     def action_confirm(self):
         res = super(SaleOrder,self).action_confirm()
+        self.validate_delivery()
         #here we need to set condition for if the its enabled then can continuw owise return True in else condition
         if self.env.user.has_group('bahmni_sale.group_skip_invoice_options'):
             for order in self:
@@ -310,6 +314,81 @@ class SaleOrder(models.Model):
                 }
         else:
             return res
+    @api.multi
+    def validate_delivery(self):
+        if self.env.ref('bahmni_sale.validate_delivery_when_order_confirmed').value == '1':
+            allow_negative = self.env.ref('bahmni_sale.allow_negative_stock')
+            print "\n\n you are in buddy",self
+            if self.picking_ids:
+                for picking in self.picking_ids:
+                    if picking.state in ('confirmed','partially_available') and allow_negative.value == '1':
+                        print "\n\n****picking.state:",picking.state
+                        picking.force_assign()#Force Available
+                        print "\n\n****After Force Assign picking.state:",picking.state
+                    found_issue = False
+                    if picking.state not in ('confirmed','partially_available'):
+                        print "\n\n****not in condition picking.state:",picking.state
+                        for pack in picking.pack_operation_product_ids:
+                            if pack.product_id.tracking != 'none':
+                                lot_ids = self._find_batch(pack.product_id,pack.product_qty,pack.location_id,picking)
+                                _logger.info("\n\n***** lot_ids result:%s\n*****",lot_ids)
+                                if lot_ids:
+                                    #First need to Find the related move_id of this operation
+                                    operation_link_obj = self.env['stock.move.operation.link'].search([('operation_id','=',pack.id)],limit=1)
+                                    move_obj = operation_link_obj.move_id
+                                    #Now we have to update entry to the related table which holds the lot, stock_move and operation entrys
+                                    pack_operation_lot = self.env['stock.pack.operation.lot'].search([('operation_id','=',pack.id)],limit=1)
+                                    for lot in lot_ids:
+                                        pack_operation_lot.write({
+                                            'lot_name': lot.name,
+                                            'qty': pack.product_qty,
+                                            'operation_id': pack.id,
+                                            'move_id': move_obj.id,
+                                            'lot_id': lot.id,
+                                            'cost_price': lot.cost_price,
+                                            'sale_price': lot.sale_price,
+                                            'mrp': lot.mrp
+                                            })
+                                    pack.qty_done = pack.product_qty
+                                else:
+                                    found_issue = True
+                            else:
+                                pack.qty_done = pack.product_qty
+                        if not found_issue:
+                            picking.do_new_transfer()#Validate
+                    
+
+    def _find_batch(self, product, qty, location, picking):
+        _logger.info("\n\n***** Product :%s, Quantity :%s Location :%s\n*****",product,qty,location)
+        lot_objs = self.env['stock.production.lot'].search([('product_id','=',product.id),('life_date','>=',str(fields.datetime.now()))])
+        _logger.info('\n *** Searched Lot Objects:%s \n',lot_objs)
+        if any(lot_objs):
+            #Sort losts based on the expiry date FEFO(First Expiry First Out)
+            lot_objs = list(lot_objs)
+            sorted_lot_list = sorted(lot_objs, key=lambda l: l.life_date)
+            _logger.info('\n *** Sorted based on FEFO :%s \n',sorted_lot_list)
+            done_qty = qty
+            res_lot_ids = []
+            lot_ids_for_query = tuple([lot.id for lot in sorted_lot_list])
+            self._cr.execute("SELECT SUM(qty) FROM stock_quant WHERE lot_id IN %s and location_id=%s",(lot_ids_for_query,location.id,))
+            qry_rslt = self._cr.fetchall()
+            available_qty = qry_rslt[0] and qry_rslt[0][0] or 0
+            if available_qty >= qty:
+                for lot_obj in sorted_lot_list:
+                    quants = lot_obj.quant_ids.filtered(lambda q: q.location_id == location)
+                    for quant in quants:
+                        if done_qty >= 0:
+                            res_lot_ids.append(lot_obj)
+                            done_qty = done_qty - quant.qty
+                return res_lot_ids
+            else:
+                message = ("<b>Auto validation Failed</b> <br/> <b>Reason:</b> There are not enough stock available for <a href=# data-oe-model=product.product data-oe-id=%d>%s</a> product on <a href=# data-oe-model=stock.location data-oe-id=%d>%s</a> Location") % (product.id,product.name,location.id,location.name)
+                self.message_post(body=message)
+        else:
+            message = ("<b>Auto validation Failed</b> <br/> <b>Reason:</b> There are no Batches/Serial no's available for <a href=# data-oe-model=product.product data-oe-id=%d>%s</a> product") % (product.id,product.name)
+            self.message_post(body=message)
+            return False
+       
     @api.onchange('shop_id')
     def onchange_shop_id(self):
         self.warehouse_id = self.shop_id.warehouse_id.id
