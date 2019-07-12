@@ -56,50 +56,6 @@ class AccountInvoice(models.Model):
             self.discount_percentage = (self.discount / amount_total) * 100
         if self.discount_percentage:
             self.discount = amount_total * self.discount_percentage / 100
-            
-    @api.model
-    def create(self, vals):
-        rec = super(AccountInvoice,self).create(vals)
-        if rec.origin and self.env.ref('bahmni_account.validate_picking_basedon_invoice').value == '1':
-            sale_order = self.env['sale.order'].search([('name','=',rec.origin)])
-            if any(sale_order) and len(sale_order.picking_ids):
-                for picking in sale_order.picking_ids:
-                    if picking.state in ('confirmed','partially_available'):
-                        products_not_available = ""
-                        for move in picking.move_lines.filtered(lambda m:m.state != 'assigned'):
-                            products_not_available += '<li>' + move.product_id.name + '</li>'
-                        message = ("<b>Auto validation Failed</b> <br/> <b>Reason:</b>There is no enough stock for below products%s")%(products_not_available)
-                        picking.message_post(body=message)
-                    found_issue = False
-                    for pack in picking.pack_operation_product_ids:
-                        if pack.product_id.tracking != 'none':
-                            lot_ids = self._find_batch(pack.product_id,pack.product_qty,pack.location_id,picking)
-                            _logger.info("\n\n***** lot_ids result:%s\n*****",lot_ids)
-                            if lot_ids:
-                                #First need to Find the related move_id of this operation
-                                operation_link_obj = self.env['stock.move.operation.link'].search([('operation_id','=',pack.id)],limit=1)
-                                move_obj = operation_link_obj.move_id
-                                #Now we have to update entry to the related table which holds the lot, stock_move and operation entrys
-                                pack_operation_lot = self.env['stock.pack.operation.lot'].search([('operation_id','=',pack.id)],limit=1)
-                                for lot in lot_ids:
-                                    pack_operation_lot.write({
-                                        'lot_name': lot.name,
-                                        'qty': pack.product_qty,
-                                        'operation_id': pack.id,
-                                        'move_id': move_obj.id,
-                                        'lot_id': lot.id,
-                                        'cost_price': lot.cost_price,
-                                        'sale_price': lot.sale_price,
-                                        'mrp': lot.mrp
-                                        })
-                                pack.qty_done = pack.product_qty
-                            else:
-                                found_issue = True
-                        else:
-                            pack.qty_done = pack.product_qty
-                    if not found_issue:
-                        picking.do_new_transfer()#Validate
-        return rec
         
     @api.multi
     def _find_batch(self, product, qty, location, picking):
