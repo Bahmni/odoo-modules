@@ -19,7 +19,7 @@
 <!--	this field position is changed, as this field is required 
 and in case user exactly don't know the position, he/she will need to search for the pages, to avoid that..-->
 			<xpath expr="//field[@name='type']" position="after">
-				<field name="ref" required="1"/>
+				<field name="ref" />
 			</xpath>
             <xpath expr="//field[@name='lang']" position="after">
                 <field name="uuid" invisible = "1"/>
