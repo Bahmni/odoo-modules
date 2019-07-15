@@ -149,8 +149,8 @@ class AtomEventWorker(models.Model):
         
     def _create_or_update_person_attributes(self, cust_id, vals):#TODO whole method
         attributes = json.loads(vals.get("attributes", "{}"))
-        openmrs_attributes_rec = self.env.ref('bahmni_atom_feed.openmrs_patient_attributes')
-        openmrs_attributes_list = str(openmrs_attributes_rec.value).split(',')
+        openmrs_patient_attributes = str(self.env.ref('bahmni_atom_feed.openmrs_patient_attributes').value)
+        openmrs_attributes_list = filter(lambda s: len(s) > 0, map(str.strip, openmrs_patient_attributes.split(',')))
         _logger.info("\n List of Patient Attributes to Sync = %s", openmrs_attributes_list)
         for key in attributes:
             if key in openmrs_attributes_list:
