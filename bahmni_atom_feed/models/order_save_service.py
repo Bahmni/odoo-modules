@@ -391,14 +391,20 @@ class OrderSaveService(models.Model):
             
             
             sale_obj = self.env['sale.order'].browse(sale_order)
-            if sale_obj.shop_id.pricelist_id:
-                matched_pricelist_line = prod_obj.pricelist_item_ids.filtered(lambda l:l.pricelist_id == sale_obj.shop_id.pricelist_id)
-                if any(matched_pricelist_line):
-                    price = float(matched_pricelist_line.price.split(' ')[0])
-                    sale_order_line.update({'price_unit':price})
-                
-
-            sale_order_line_obj.create(sale_order_line)
+            sale_line = sale_order_line_obj.create(sale_order_line)
+            
+            sale_line._compute_tax_id()
+            if sale_obj.pricelist_id:
+                line_product = prod_obj.with_context(
+                    lang = sale_obj.partner_id.lang,
+                    partner = sale_obj.partner_id.id,
+                    quantity = sale_line.product_uom_qty,
+                    date = sale_obj.date_order,
+                    pricelist = sale_obj.pricelist_id.id,
+                    uom = prod_obj.uom_id.id
+                )
+                price = self.env['account.tax']._fix_tax_included_price_company(sale_line._get_display_price(prod_obj), prod_obj.taxes_id, sale_line.tax_id, sale_line.company_id)
+                sale_line.price_unit = price
 
             
             if product_uom_qty != order['quantity']:
