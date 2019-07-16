@@ -392,7 +392,17 @@ class OrderSaveService(models.Model):
             
             sale_obj = self.env['sale.order'].browse(sale_order)
             sale_line = sale_order_line_obj.create(sale_order_line)
+            
+            sale_line._compute_tax_id()
             if sale_obj.pricelist_id:
+                line_product = prod_obj.with_context(
+                    lang = sale_obj.partner_id.lang,
+                    partner = sale_obj.partner_id.id,
+                    quantity = sale_line.product_uom_qty,
+                    date = sale_obj.date_order,
+                    pricelist = sale_obj.pricelist_id.id,
+                    uom = prod_obj.uom_id.id
+                )
                 price = self.env['account.tax']._fix_tax_included_price_company(sale_line._get_display_price(prod_obj), prod_obj.taxes_id, sale_line.tax_id, sale_line.company_id)
                 sale_line.price_unit = price
 
