@@ -14,13 +14,10 @@ class StockPackOperationLot(models.Model):
         # get cost price of product from purchase order line, linked with stock_move
         if operation_id:
             pack_operation = self.env['stock.pack.operation'].browse(operation_id)
-            pack_lot_ids = ctx.get('pack_lot_ids')
-            assigned_moves = [x[2].get('move_id') for x in pack_lot_ids if x[2]]
-            mv_op_link_ids = self.env['stock.move.operation.link'].search([('operation_id', '=', operation_id),
-                                                                           ('move_id', 'not in', assigned_moves)],
-                                                                          order='id asc')
+            mv_op_link_ids = self.env['stock.move.operation.link'].search([('operation_id', '=', operation_id)],limit=1)
+    
             if mv_op_link_ids:
-                for link in mv_op_link_ids[0]:
+                for link in mv_op_link_ids:
                     res.update({'move_id': link.move_id.id})
                     purchase_line = link.move_id.purchase_line_id
                     amount_tax = 0.0
@@ -48,4 +45,13 @@ class StockPackOperationLot(models.Model):
     move_id = fields.Many2one('stock.move',
                               string="Stock Move",
                               help="This field is used to track, which all move_ids are utilized to fetch cost_price")
-
+                              
+    @api.onchange('cost_price')
+    def onchange_cost_price(self):
+        for record in self:
+            if record.cost_price:
+                markup_table_line = self.env['price.markup.table'].search([('lower_price', '<', record.cost_price),
+                                                                       '|', ('higher_price', '>=', record.cost_price),
+                                                                       ('higher_price', '=', 0)])
+                if markup_table_line and len(markup_table_line)==1:
+                    self.sale_price =  record.cost_price + (record.cost_price * markup_table_line.markup_percentage / 100)
