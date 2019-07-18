@@ -13,6 +13,7 @@ class SaleConfigSettings(models.TransientModel):
                                        "quotation to sale order if drug is dispensed from local shop")
     validate_picking = fields.Boolean(string="Validate delivery when order confirmed")
     allow_negative_stock = fields.Boolean(string="Allow negative stock")
+    sale_price_markup = fields.Boolean(string="Determine sale price based on cost price markup")
 #     auto_convert_dispensed = fields.Selection([(0, "Allow to automatically convert "\
 #                                        "quotation to sale order if drug is dispensed from local shop"),
 #                                           (1, "Manually convert quotation to sale order")],
@@ -45,3 +46,13 @@ class SaleConfigSettings(models.TransientModel):
             value = 1 if record.allow_negative_stock else 0
             self.env.ref('bahmni_sale.allow_negative_stock').write({'value': str(value)})
 
+    @api.model
+    def get_default_sale_price_markup(self, fields):
+        value = int(self.env.ref('bahmni_sale.sale_price_basedon_cost_price_markup').value)
+        return {'sale_price_markup': bool(value)}
+
+    @api.multi
+    def set_default_sale_price_markup(self):
+        for record in self:
+            value = 1 if record.sale_price_markup else 0
+            self.env.ref('bahmni_sale.sale_price_basedon_cost_price_markup').write({'value': str(value)})
