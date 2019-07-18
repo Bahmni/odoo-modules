@@ -121,6 +121,10 @@
 				<field name="lot_id" domain="[('product_id', '=', product_id)]"/>
 				<field name="expiry_date" readonly="1"/>
 			</xpath>
+			<xpath expr="//field[@name='order_line']/form/group/group/field[@name='price_unit']" position="after">
+				<field name="lot_id" domain="[('product_id', '=', product_id)]"/>
+				<field name="expiry_date" readonly="1"/>
+			</xpath>
 		</field>
 	</record>
 	
