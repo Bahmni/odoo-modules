@@ -384,7 +384,8 @@ class OrderSaveService(models.Model):
 
             if prod_lot != None:
                 life_date = prod_lot.life_date and datetime.strptime(prod_lot.life_date, DTF)
-                sale_order_line['price_unit'] = prod_lot.sale_price if prod_lot.sale_price > 0.0 else sale_order_line['price_unit']
+                if self.env.ref('bahmni_sale.sale_price_basedon_cost_price_markup').value == '1':
+                    sale_order_line['price_unit'] = prod_lot.sale_price if prod_lot.sale_price > 0.0 else sale_order_line['price_unit']
                 sale_order_line['batch_name'] = prod_lot.name
                 sale_order_line['batch_id'] = prod_lot.id
                 sale_order_line['expiry_date'] = life_date and life_date.strftime(DTF)

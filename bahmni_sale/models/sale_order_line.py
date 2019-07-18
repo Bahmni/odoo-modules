@@ -23,6 +23,8 @@ class SaleOrderLine(models.Model):
     def onchange_lot_id(self):
         if self.lot_id:
             self.expiry_date = self.lot_id.life_date
+            if self.env.ref('bahmni_sale.sale_price_basedon_cost_price_markup').value == '1':
+                self.price_unit = self.lot_id.sale_price if self.prod_lot.sale_price > 0.0 else self.price_unit
 
     @api.model
     def get_available_batch_details(self, product_id, sale_order):

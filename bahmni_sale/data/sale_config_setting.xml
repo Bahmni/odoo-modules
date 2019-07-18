@@ -9,5 +9,9 @@
                 <field name="key">allow_negative_stock</field>
                 <field name="value">0</field>
         </record>
+        <record id="sale_price_basedon_cost_price_markup" model="ir.config_parameter">
+                <field name="key">sale_price_basedon_cost_price_markup</field>
+                <field name="value">0</field>
+        </record>
 	</data>
 </odoo>

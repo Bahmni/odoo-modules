@@ -29,6 +29,11 @@
                     <label for="allow_negative_stock"/>
                     <br/>
                 </div>
+                <label string="Markup"/>
+                <div name="sale_price_markup_feature">
+                    <field name="sale_price_markup" class="oe_inline" />
+                    <label for="sale_price_markup"/>
+                </div>
 			</xpath>
 		</field>
 	</record>
