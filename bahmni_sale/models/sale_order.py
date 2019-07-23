@@ -321,17 +321,21 @@ class SaleOrder(models.Model):
             print "\n\n you are in buddy",self
             if self.picking_ids:
                 for picking in self.picking_ids:
-                    if picking.state in ('confirmed','partially_available') and allow_negative.value == '1':
+                    if picking.state in ('waiting','confirmed','partially_available') and allow_negative.value == '1':
                         print "\n\n****picking.state:",picking.state
                         picking.force_assign()#Force Available
                         print "\n\n****After Force Assign picking.state:",picking.state
                     found_issue = False
-                    if picking.state not in ('confirmed','partially_available'):
+                    if picking.state not in ('waiting','confirmed','partially_available'):
                         print "\n\n****not in condition picking.state:",picking.state
                         for pack in picking.pack_operation_product_ids:
                             if pack.product_id.tracking != 'none':
-                                lot_ids = self._find_batch(pack.product_id,pack.product_qty,pack.location_id,picking)
-                                _logger.info("\n\n***** lot_ids result:%s\n*****",lot_ids)
+                                line = self.order_line.filtered(lambda l:l.product_id == pack.product_id)
+                                lot_ids = None
+                                if line.lot_id:
+                                    lot_ids = line.lot_id
+                                else:
+                                    lot_ids = self._find_batch(pack.product_id,pack.product_qty,pack.location_id,picking)
                                 if lot_ids:
                                     #First need to Find the related move_id of this operation
                                     operation_link_obj = self.env['stock.move.operation.link'].search([('operation_id','=',pack.id)],limit=1)
