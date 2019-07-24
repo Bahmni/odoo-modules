@@ -125,6 +125,22 @@
 				<field name="lot_id" domain="[('product_id', '=', product_id)]"/>
 				<field name="expiry_date" readonly="1"/>
 			</xpath>
+			<xpath expr="//field[@name='order_line']/tree/field[@name='product_id']" position="replace">
+				<field name="product_id" 
+				       context="{'partner_id':parent.partner_id, 'quantity':product_uom_qty, 'pricelist':parent.pricelist_id, 'uom':product_uom, 'company_id': parent.company_id}"/><!--attrs="{'readonly': ['|', ('qty_invoiced', '&gt;', 0), ('procurement_ids', '!=', [])]}"-->
+			</xpath>
+			<xpath expr="//field[@name='order_line']/tree/field[@name='qty_delivered']" position="replace">
+			    <field name="qty_delivered" invisible="context.get('hide_sale')"/>
+                                        <!--attrs="{'readonly': [('qty_delivered_updateable', '=', False)]}"/-->
+            </xpath>
+            <xpath expr="//field[@name='order_line']/tree/field[@name='price_unit']" position="replace">
+                <field name="price_unit"/>
+                                        <!--attrs="{'readonly': [('qty_invoiced', '&gt;', 0)]}"/-->
+            </xpath>
+            <xpath expr="//field[@name='order_line']/tree/field[@name='tax_id']" position="replace">
+                                    <field name="tax_id" widget="many2many_tags" domain="[('type_tax_use','=','sale'),('company_id','=',parent.company_id)]"/>
+                                        <!--attrs="{'readonly': [('qty_invoiced', '&gt;', 0)]}"/-->
+            </xpath>
 		</field>
 	</record>
 	
