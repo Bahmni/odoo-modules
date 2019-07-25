@@ -318,16 +318,12 @@ class SaleOrder(models.Model):
     def validate_delivery(self):
         if self.env.ref('bahmni_sale.validate_delivery_when_order_confirmed').value == '1':
             allow_negative = self.env.ref('bahmni_sale.allow_negative_stock')
-            print "\n\n you are in buddy",self
             if self.picking_ids:
                 for picking in self.picking_ids:
                     if picking.state in ('waiting','confirmed','partially_available') and allow_negative.value == '1':
-                        print "\n\n****picking.state:",picking.state
                         picking.force_assign()#Force Available
-                        print "\n\n****After Force Assign picking.state:",picking.state
                     found_issue = False
                     if picking.state not in ('waiting','confirmed','partially_available'):
-                        print "\n\n****not in condition picking.state:",picking.state
                         for pack in picking.pack_operation_product_ids:
                             if pack.product_id.tracking != 'none':
                                 line = self.order_line.filtered(lambda l:l.product_id == pack.product_id)
@@ -401,3 +397,34 @@ class SaleOrder(models.Model):
         self.project_id = self.shop_id.project_id.id if self.shop_id.project_id else False
         if self.shop_id.pricelist_id:
             self.pricelist_id = self.shop_id.pricelist_id.id
+            
+    @api.multi
+    def validate_payment(self):
+        for obj in self:
+            ctx = {'active_ids': [obj.id]}
+            default_vals = self.env['sale.advance.payment.inv'
+                                        ].with_context(ctx).default_get(['count', 'deposit_taxes_id',
+                                                                         'advance_payment_method', 'product_id',
+                                                                         'deposit_account_id'])
+            payment_inv_wiz = self.env['sale.advance.payment.inv'].with_context(ctx).create(default_vals)
+            payment_inv_wiz.with_context(ctx).create_invoices()
+            for inv in obj.invoice_ids:
+                inv.action_invoice_open()
+                account_payment_env = self.env['account.payment']
+                fields = account_payment_env.fields_get().keys()
+                default_fields = account_payment_env.with_context({'default_invoice_ids': [(4, inv.id, None)]}).default_get(fields)
+                journal_id = self.env['account.journal'].search([('type', '=', 'cash')],
+                                                                limit=1)
+                default_fields.update({'journal_id': journal_id.id})
+                payment_method_ids = self.env['account.payment.method'
+                                              ].search([('payment_type', '=', default_fields.get('payment_type'))]).ids
+                if default_fields.get('payment_type') == 'inbound':
+                    journal_payment_methods = journal_id.inbound_payment_method_ids.ids
+                elif default_fields.get('payment_type') == 'outbond':
+                    journal_payment_methods = journal_id.outbound_payment_method_ids.ids
+                common_payment_method = list(set(payment_method_ids).intersection(set(journal_payment_methods)))
+                common_payment_method.sort()
+                default_fields.update({'payment_method_id': common_payment_method[0]})
+                account_payment = account_payment_env.create(default_fields)
+                account_payment.post()
+
