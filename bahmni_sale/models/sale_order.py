@@ -189,88 +189,7 @@ class SaleOrder(models.Model):
         }
         return invoice_vals
 
-    @api.model
-    def create(self, vals):
-        '''Inherited this method to directly convert quotation to sale order, when it is dispensed at location'''
-        res = super(SaleOrder, self).create(vals)
-        auto_convert_set = self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
-                                                         ('name', '=', 'convert_dispensed')]).value
-        if auto_convert_set and vals.get('dispensed'):
-            # confirm quotation
-            res.action_confirm()
-            # process the delivery order related to this order
-            pickings = self.env['stock.picking'].search([('group_id', '=', res.procurement_group_id.id)]) if res.procurement_group_id else []
-            for pick in pickings:
-                for ln in pick.pack_operation_product_ids:
-                    required_qty = ln.product_qty
-                    if ln.product_id.tracking != 'none':
-                        # unlinked already populated lot_ids, as in bahmni according to expiry_date assignment is imp.
-                        for l in ln.pack_lot_ids:
-                            l.unlink()
-                        pack_lot_ids = []
-                        alloted_lot_ids = []
-                        while required_qty != 0:
-                            lot_id = self.env['stock.production.lot'].search([('product_id', '=', ln.product_id.id),
-                                                                              ('life_date', '>', datetime.combine(date.today(), datetime.min.time()).strftime(DSDF)),
-                                                                              ('id', 'not in', alloted_lot_ids)],
-                                                                             order='life_date', limit=1)
-                            if not lot_id:
-                                lot_id = self.env['stock.production.lot'].search([('product_id', '=', ln.product_id.id),
-                                                                         ('id', 'not in', alloted_lot_ids)],
-                                                                        limit=1, order='id')
-                            if lot_id:
-                                quant_id = self.env['stock.quant'].search([('lot_id', '=', lot_id.id),
-                                                                            ('location_id', '=', ln.location_id.id),
-                                                                            ('product_id', '=', ln.product_id.id)])
-                                if len(quant_id) == 1:
-                                    available_qty = quant_id.qty
-                                else:
-                                    available_qty = sum([x.qty for x in quant_id])
-                                if available_qty <= required_qty:
-                                    pack_lot_ids.append((0, 0, {'lot_id': lot_id.id,
-                                                                'qty': available_qty,
-                                                                'qty_todo': available_qty}))
-                                    required_qty = required_qty - available_qty
-                                    alloted_lot_ids.append(lot_id.id)
-                                elif available_qty > required_qty:
-                                    pack_lot_ids.append((0, 0, {'lot_id': lot_id.id,
-                                                                'qty': required_qty,
-                                                                'qty_todo': required_qty}))
-                                    required_qty = 0
-                                    alloted_lot_ids.append(lot_id.id)
-                        ln.pack_lot_ids = pack_lot_ids
-                        ln.qty_done = ln.product_qty
-                    elif ln.product_id.tracking == 'none':
-                        ln.qty_done = ln.product_qty
-                pick.do_new_transfer()
-            # create and process the invoice
-            ctx = {'active_ids': [res.id]}
-            default_vals = self.env['sale.advance.payment.inv'
-                                    ].with_context(ctx).default_get(['count', 'deposit_taxes_id',
-                                                                     'advance_payment_method', 'product_id',
-                                                                     'deposit_account_id'])
-            payment_inv_wiz = self.env['sale.advance.payment.inv'].with_context(ctx).create(default_vals)
-            payment_inv_wiz.with_context(ctx).create_invoices()
-            for inv in res.invoice_ids:
-                inv.action_invoice_open()
-                account_payment_env = self.env['account.payment']
-                fields = account_payment_env.fields_get().keys()
-                default_fields = account_payment_env.with_context({'default_invoice_ids': [(4, inv.id, None)]}).default_get(fields)
-                journal_id = self.env['account.journal'].search([('type', '=', 'cash')],
-                                                                limit=1)
-                default_fields.update({'journal_id': journal_id.id})
-                payment_method_ids = self.env['account.payment.method'
-                                              ].search([('payment_type', '=', default_fields.get('payment_type'))]).ids
-                if default_fields.get('payment_type') == 'inbound':
-                    journal_payment_methods = journal_id.inbound_payment_method_ids.ids
-                elif default_fields.get('payment_type') == 'outbond':
-                    journal_payment_methods = journal_id.outbound_payment_method_ids.ids
-                common_payment_method = list(set(payment_method_ids).intersection(set(journal_payment_methods)))
-                common_payment_method.sort()
-                default_fields.update({'payment_method_id': common_payment_method[0]})
-                account_payment = account_payment_env.create(default_fields)
-                account_payment.post()
-        return res
+
     #By Pass the Invoice wizard while we press the "Create Invoice" button in sale order afer confirmation.
     #So Once we Confirm the sale order it will create the invoice and ask for the register payment.
     @api.multi
@@ -356,7 +275,9 @@ class SaleOrder(models.Model):
                                 pack.qty_done = pack.product_qty
                         if not found_issue:
                             picking.do_new_transfer()#Validate
-                    
+                    else:
+                        message = ("<b>Auto validation Failed</b> <br/> <b>Reason:</b> There are not enough stock available for Some product on <a href=# data-oe-model=stock.location data-oe-id=%d>%s</a> Location") % (self.location_id,self.location_id.name)
+                        self.message_post(body=message)
 
     def _find_batch(self, product, qty, location, picking):
         _logger.info("\n\n***** Product :%s, Quantity :%s Location :%s\n*****",product,qty,location)

@@ -38,7 +38,7 @@ class SaleConfigSettings(models.TransientModel):
     @api.model
     def get_default_allow_negative_stock(self, fields):
         value = int(self.env.ref('bahmni_sale.allow_negative_stock').value)
-        return {'validate_picking': bool(value)}
+        return {'allow_negative_stock': bool(value)}
 
     @api.multi
     def set_default_allow_negative_stock(self):
