@@ -341,7 +341,7 @@ class SaleOrder(models.Model):
                                               ].search([('payment_type', '=', default_fields.get('payment_type'))]).ids
                 if default_fields.get('payment_type') == 'inbound':
                     journal_payment_methods = journal_id.inbound_payment_method_ids.ids
-                elif default_fields.get('payment_type') == 'outbond':
+                elif default_fields.get('payment_type') == 'outbound':
                     journal_payment_methods = journal_id.outbound_payment_method_ids.ids
                 common_payment_method = list(set(payment_method_ids).intersection(set(journal_payment_methods)))
                 common_payment_method.sort()
