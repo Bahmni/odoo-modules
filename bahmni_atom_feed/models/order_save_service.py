@@ -461,9 +461,22 @@ class OrderSaveService(models.Model):
                 return order
 
     @api.model
+    def _is_order_revised_processed(self, all_orders, order_to_process):
+        parent_order_line = None
+        for order in all_orders:
+            if order.get('previousOrderId', '') == order_to_process.get('orderId'):
+                parent_order_line = self.env['sale.order.line'].search([('external_order_id', '=', order.get('orderId'))])
+                break
+        return True if parent_order_line and any(parent_order_line) else False
+
+    @api.model
     def _filter_processed_orders(self, orders):
         unprocessed_orders = []
+        # sort the orders so that the revised ones appear later
+        orders.sort(key=lambda order_item: 1 if order_item.get('previousOrderId', '') == '' else 2)
         for order in orders:
+            if self._is_order_revised_processed(orders, order):
+                continue
             dispensed_status = order.get('dispensed') == 'true'
             existing_order_line = self.env['sale.order.line'].search([('external_order_id', '=', order['orderId'])])
             if not existing_order_line:
