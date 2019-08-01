@@ -123,9 +123,9 @@ class OrderSaveService(models.Model):
                 # or with conceptName
                 unprocessed_orders = self._filter_processed_orders(orders)
                 _logger.info("\n DEBUG: Unprocessed Orders: %s", unprocessed_orders)
-                tup = self._get_shop_and_location_id(orderType, location_name, order_type_def)
-                shop_id = tup[0]
-                location_id = tup[1]
+                shop_id, location_id = self._get_shop_and_location_id(orderType, location_name, order_type_def)
+                # shop_id = tup[0]
+                # location_id = tup[1]
 
                 if (not shop_id):
                     err_message = "Can not process order. Order type:{} - should be matched to a shop".format(orderType)
@@ -204,10 +204,17 @@ class OrderSaveService(models.Model):
 
                 if (len(unprocessed_dispensed_order) > 0):
                     _logger.debug("\n Processing Unprocessed dispensed Orders: %s", list(unprocessed_dispensed_order))
+                    auto_convert_dispensed = self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
+                                                                           ('name', '=', 'convert_dispensed')]).value
+
                     sale_order_ids = self.env['sale.order'].search([('partner_id', '=', cus_id.id),
                                                                     ('shop_id', '=', shop_id),
                                                                     ('state', '=', 'draft'),
                                                                     ('origin', '=', 'ATOMFEED SYNC')])
+
+                    if any(sale_order_ids):
+                        _logger.debug("\n For exsiting sale orders for the shop, trying to unlink any openmrs order if any")
+                        self._unlink_sale_order_lines_and_remove_empty_orders(sale_order_ids,unprocessed_dispensed_order)
 
                     sale_order_ids_for_dispensed = self.env['sale.order'].search([('partner_id', '=', cus_id.id),
                                                                                   ('shop_id', '=', shop_id),
@@ -216,25 +223,21 @@ class OrderSaveService(models.Model):
                                                                                   ('origin', '=', 'ATOMFEED SYNC')])
 
                     if not sale_order_ids_for_dispensed:
-                        _logger.debug("\n Could not find any sale_order at specified shop and stock location. Checking other sale orders for the shop")
-                        if any(sale_order_ids):
-                            _logger.debug("\n For exsiting sale orders for the shop, trying to unlink any openmrs order if any")
-                            self._unlink_sale_order_lines_and_remove_empty_orders(sale_order_ids,unprocessed_dispensed_order)
-                            #Remove existing sale order line
-                            #self._remove_existing_sale_order_line(sale_order_ids[0],unprocessed_dispensed_order)
-                            # sale_order_line_ids = self.env['sale.order.line'].search([('order_id', '=', sale_order_ids[0].id)])
-                            # dispensed = False
-                            # for order in unprocessed_dispensed_order:
-                            #     for line in sale_order_line_ids:
-                            #         if order.get('orderId') == line.external_order_id and order.get('dispensed')!='false':
-                            #             line.write({'dispensed':True})
-                            #             dispensed = True
-                            # if dispensed:
-                            #     auto_convert_set = self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
-                            #                              ('name', '=', 'convert_dispensed')]).value
-                            #     if auto_convert_set:
-                            #         sale_order_ids.action_confirm()
-                            #         sale_order_ids.validate_payment()
+                        _logger.debug("\n Could not find any sale_order at specified shop and stock location. Creating a new Sale order for dispensed orders")
+
+                        # TODO: commenting off anand's code for now
+                        # dispensed = False
+                        # for order in unprocessed_dispensed_order:
+                        #     for line in sale_order_line_ids:
+                        #         if order.get('orderId') == line.external_order_id and order.get('dispensed')!='false':
+                        #             line.write({'dispensed':True})
+                        #             dispensed = True
+                        # if dispensed:
+                        #     auto_convert_set = self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
+                        #                              ('name', '=', 'convert_dispensed')]).value
+                        #     if auto_convert_set:
+                        #         sale_order_ids.action_confirm()
+                        #         sale_order_ids.validate_payment()
 
                         sale_order_dict = {'partner_id': cus_id.id,
                                            'location_id': location_id,
@@ -256,50 +259,21 @@ class OrderSaveService(models.Model):
                         for line in unprocessed_dispensed_order:
                             self._process_orders(new_sale_order, unprocessed_dispensed_order, line)
 
-                        auto_convert_set = self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
-                                                                         ('name', '=', 'convert_dispensed')]).value
-                        if auto_convert_set:
+                        if auto_convert_dispensed:
                             _logger.debug("\n Confirming delivery and payment for the newly created sale order..")
                             new_sale_order.action_confirm()
                             new_sale_order.validate_payment()
 
                     else:
-                        # remove the older sales order lines for these unprocessed dispensed openmrs orders if any
-                        # and process them again. During unlinking we also remove any order if its empty after removing
-                        # the order lines.
+                        _logger.debug("\n There are other sale_orders at specified shop and stock location.")
+                        sale_order_to_process = None
+                        if not auto_convert_dispensed:
+                            # try to find an existing sale order to add the openmrs orders to
+                            if any(sale_order_ids_for_dispensed):
+                                _logger.debug("\n Found a sale order to append dispensed lines. ID : %s",sale_order_ids_for_dispensed[0].id)
+                                sale_order_to_process = sale_order_ids_for_dispensed[0]
 
-                        _logger.debug("\n There are other sale_orders at specified shop and stock location. Ensuring that the openmrs orders are first unlinked")
-                        self._unlink_sale_order_lines_and_remove_empty_orders(sale_order_ids, unprocessed_dispensed_order)
-                        # for existing_sale_order in sale_order_ids:
-                        #     _logger.info("\n DEBUG: checking existing sale order for any older order_lines. ID : %s", existing_sale_order.id)
-                        #     # Remove existing sale order line
-                        #     sale_order_lines_removed = self._remove_existing_sale_order_line(existing_sale_order,unprocessed_dispensed_order)
-                        #
-                        #     if not any(sale_order_lines_removed):
-                        #         continue
-                        #
-                        #     # Removing existing empty sale order
-                        #     exisiting_sale_order_lines = self.env['sale.order.line'].search([('order_id', '=', existing_sale_order.id)])
-                        #     if not exisiting_sale_order_lines or not any(exisiting_sale_order_lines):
-                        #         _logger.info("\n DEBUG: Removing Empty Sale Order. ID : %s", existing_sale_order.id)
-                        #         existing_sale_order.unlink()
-
-                        # Now we need to check for any sale order at the specified shop and location.
-                        # if there is one, we can add the order lines to that, otherwise create a new one
-                        current_sale_orders = self.env['sale.order'].search([('partner_id', '=', cus_id.id),
-                                                                             ('shop_id', '=', shop_id),
-                                                                             ('location_id', '=', location_id),
-                                                                             ('state', '=', 'draft'),
-                                                                             ('origin', '=', 'ATOMFEED SYNC')])
-
-                        sale_order_updated = None
-                        if current_sale_orders and any(current_sale_orders):
-                            _logger.debug("\n Found a sale order to append dispensed lines. ID : %s", current_sale_orders[0].id)
-                            for dispensed_order in unprocessed_dispensed_order:
-                                _logger.info("\n DEBUG: Processing dispensed lines.")
-                                self._process_orders(current_sale_orders[0], unprocessed_dispensed_order, dispensed_order)
-                                sale_order_updated = current_sale_orders[0]
-                        else:
+                        if not sale_order_to_process:
                             # create new sale order
                             _logger.debug("\n Post unlinking of order lines. Could not find  a sale order to append dispensed lines. Creating .. ")
                             sales_order_obj = {'partner_id': cus_id.id,
@@ -315,19 +289,23 @@ class OrderSaveService(models.Model):
                                                'state': 'draft',
                                                'shop_id': shop_id,
                                                'origin': 'ATOMFEED SYNC'}
+
                             if shop_obj.pricelist_id:
                                 sales_order_obj.update({'pricelist_id': shop_obj.pricelist_id.id})
-                            sale_order_updated = self.env['sale.order'].create(sales_order_obj)
-                            _logger.info("\n DEBUG: Created a new Sale Order. ID: %s", sale_order_updated.id)
-                            for line in unprocessed_dispensed_order:
-                                self._process_orders(sale_order_updated, unprocessed_dispensed_order, line)
+                            sale_order_to_process = self.env['sale.order'].create(sales_order_obj)
+                            _logger.info("\n DEBUG: Created a new Sale Order. ID: %s", sale_order_to_process.id)
 
-                        auto_convert_set = self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
-                                                                         ('name', '=', 'convert_dispensed')]).value
-                        if auto_convert_set and sale_order_updated:
+                        _logger.debug("\n Processing dispensed lines. Appending to Order ID %s", sale_order_to_process.id)
+                        for line in unprocessed_dispensed_order:
+                            self._process_orders(sale_order_to_process, unprocessed_dispensed_order, line)
+
+                        if auto_convert_dispensed and sale_order_to_process:
                             _logger.debug("\n Confirming delivery and payment ..")
-                            sale_order_updated.action_confirm()
-                            sale_order_updated.validate_payment()
+                            sale_order_to_process.action_confirm()
+                            # TODO: payment validation checks
+                            # TODO: 1) Should be done through a config "sale.config.settings"[auto_invoice_dispensed]"
+                            # TODO: 2) Should check the invoice amount. Odoo fails/throws-error if the invoice amount is 0.
+                            sale_order_to_process.validate_payment()
 
         else:
             raise Warning("Patient Id not found in Odoo")
@@ -532,7 +510,6 @@ class OrderSaveService(models.Model):
             prod_ids = self.env['product.product'].search([('uuid', '=', order['productId'])])
         else:
             prod_ids = self.env['product.product'].search([('name', '=', order['conceptName'])])
-
         return prod_ids.ids
 
 
@@ -541,11 +518,8 @@ class OrderSaveService(models.Model):
         for existing_sale_order in sale_orders:
             _logger.info("\n DEBUG: checking existing sale order for any older order_lines. ID : %s", existing_sale_order.id)
             # Remove existing sale order line
-            sale_order_lines_removed = self._remove_existing_sale_order_line(existing_sale_order, openmrs_orders)
-
-            if not any(sale_order_lines_removed):
+            if not any(self._remove_existing_sale_order_line(existing_sale_order, openmrs_orders)):
                 continue
-
             # Removing existing empty sale order
             exisiting_sale_order_lines = self.env['sale.order.line'].search([('order_id', '=', existing_sale_order.id)])
             if not exisiting_sale_order_lines or not any(exisiting_sale_order_lines):

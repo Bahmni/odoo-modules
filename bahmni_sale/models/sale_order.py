@@ -83,10 +83,6 @@ class SaleOrder(models.Model):
             })
 
 
-    external_id = fields.Char(string="External Id",
-                              help="This field is used to store encounter ID of bahmni api call")
-    dispensed = fields.Boolean(string="Dispensed",
-                               help="Flag to identify whether drug order is dispensed or not.")
     partner_village = fields.Many2one("village.village", string="Partner Village")
     care_setting = fields.Selection([('ipd', 'IPD'),
                                      ('opd', 'OPD')], string="Care Setting")

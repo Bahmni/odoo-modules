@@ -14,10 +14,6 @@ class SaleConfigSettings(models.TransientModel):
     validate_picking = fields.Boolean(string="Validate delivery when order confirmed")
     allow_negative_stock = fields.Boolean(string="Allow negative stock")
     sale_price_markup = fields.Boolean(string="Determine sale price based on cost price markup")
-#     auto_convert_dispensed = fields.Selection([(0, "Allow to automatically convert "\
-#                                        "quotation to sale order if drug is dispensed from local shop"),
-#                                           (1, "Manually convert quotation to sale order")],
-#                                          string="Convert Dispensed")
 
     @api.multi
     def set_convert_dispensed(self):
