@@ -83,10 +83,6 @@ class SaleOrder(models.Model):
             })
 
 
-    external_id = fields.Char(string="External Id",
-                              help="This field is used to store encounter ID of bahmni api call")
-    dispensed = fields.Boolean(string="Dispensed",
-                               help="Flag to identify whether drug order is dispensed or not.")
     partner_village = fields.Many2one("village.village", string="Partner Village")
     care_setting = fields.Selection([('ipd', 'IPD'),
                                      ('opd', 'OPD')], string="Care Setting")
@@ -341,7 +337,7 @@ class SaleOrder(models.Model):
                                               ].search([('payment_type', '=', default_fields.get('payment_type'))]).ids
                 if default_fields.get('payment_type') == 'inbound':
                     journal_payment_methods = journal_id.inbound_payment_method_ids.ids
-                elif default_fields.get('payment_type') == 'outbond':
+                elif default_fields.get('payment_type') == 'outbound':
                     journal_payment_methods = journal_id.outbound_payment_method_ids.ids
                 common_payment_method = list(set(payment_method_ids).intersection(set(journal_payment_methods)))
                 common_payment_method.sort()
