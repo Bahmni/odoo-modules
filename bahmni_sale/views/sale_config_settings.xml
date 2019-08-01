@@ -17,7 +17,10 @@
                     <br/>
                     <field name="convert_dispensed" class="oe_inline" />
                     <label for="convert_dispensed"/>
-                    
+                    <br/>
+                    <field name="auto_invoice_dispensed" class="oe_inline" />
+                    <label for="auto_invoice_dispensed"/>
+
                 </div>
 <!--                <field name="auto_convert_dispensed" widget="radio"/-->
                 <label string="Delivery"/>

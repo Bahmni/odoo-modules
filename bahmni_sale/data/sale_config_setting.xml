@@ -13,5 +13,10 @@
                 <field name="key">sale_price_basedon_cost_price_markup</field>
                 <field name="value">0</field>
         </record>
+        <record id="auto_register_invoice_payment_for_dispensed" model="ir.config_parameter">
+                <field name="key">auto_register_invoice_payment_for_dispensed</field>
+                <field name="value">0</field>
+        </record>
+
 	</data>
 </odoo>
