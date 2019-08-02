@@ -229,6 +229,14 @@ class SaleOrder(models.Model):
                 }
         else:
             return res
+
+
+    #This method will be called when validation is happens from the Bahmni side
+    @api.multi
+    def auto_validate_delivery(self):
+        super(SaleOrder, self).action_confirm()
+        self.validate_delivery()
+
     @api.multi
     def validate_delivery(self):
         if self.env.ref('bahmni_sale.validate_delivery_when_order_confirmed').value == '1':
@@ -327,21 +335,27 @@ class SaleOrder(models.Model):
             payment_inv_wiz.with_context(ctx).create_invoices()
             for inv in obj.invoice_ids:
                 inv.action_invoice_open()
-                account_payment_env = self.env['account.payment']
-                fields = account_payment_env.fields_get().keys()
-                default_fields = account_payment_env.with_context({'default_invoice_ids': [(4, inv.id, None)]}).default_get(fields)
-                journal_id = self.env['account.journal'].search([('type', '=', 'cash')],
-                                                                limit=1)
-                default_fields.update({'journal_id': journal_id.id})
-                payment_method_ids = self.env['account.payment.method'
-                                              ].search([('payment_type', '=', default_fields.get('payment_type'))]).ids
-                if default_fields.get('payment_type') == 'inbound':
-                    journal_payment_methods = journal_id.inbound_payment_method_ids.ids
-                elif default_fields.get('payment_type') == 'outbound':
-                    journal_payment_methods = journal_id.outbound_payment_method_ids.ids
-                common_payment_method = list(set(payment_method_ids).intersection(set(journal_payment_methods)))
-                common_payment_method.sort()
-                default_fields.update({'payment_method_id': common_payment_method[0]})
-                account_payment = account_payment_env.create(default_fields)
-                account_payment.post()
+                if inv.state == 'paid':
+                    continue
+                elif inv.amount_total > 0:
+                    account_payment_env = self.env['account.payment']
+                    fields = account_payment_env.fields_get().keys()
+                    default_fields = account_payment_env.with_context({'default_invoice_ids': [(4, inv.id, None)]}).default_get(fields)
+                    journal_id = self.env['account.journal'].search([('type', '=', 'cash')],
+                                                                    limit=1)
+                    default_fields.update({'journal_id': journal_id.id})
+                    payment_method_ids = self.env['account.payment.method'
+                                                  ].search([('payment_type', '=', default_fields.get('payment_type'))]).ids
+                    if default_fields.get('payment_type') == 'inbound':
+                        journal_payment_methods = journal_id.inbound_payment_method_ids.ids
+                    elif default_fields.get('payment_type') == 'outbound':
+                        journal_payment_methods = journal_id.outbound_payment_method_ids.ids
+                    common_payment_method = list(set(payment_method_ids).intersection(set(journal_payment_methods)))
+                    common_payment_method.sort()
+                    default_fields.update({'payment_method_id': common_payment_method[0]})
+                    account_payment = account_payment_env.create(default_fields)
+                    account_payment.post()
+                else:
+                    message = "<b>Auto validation Failed</b> <br/> <b>Reason:</b> The Total amount is 0 So, Can't Register Payment."
+                    inv.message_post(body=message)
 

@@ -206,6 +206,8 @@ class OrderSaveService(models.Model):
                     _logger.debug("\n Processing Unprocessed dispensed Orders: %s", list(unprocessed_dispensed_order))
                     auto_convert_dispensed = self.env['ir.values'].search([('model', '=', 'sale.config.settings'),
                                                                            ('name', '=', 'convert_dispensed')]).value
+                    auto_invoice_dispensed = self.env.ref('bahmni_sale.auto_register_invoice_payment_for_dispensed').value
+
 
                     sale_order_ids = self.env['sale.order'].search([('partner_id', '=', cus_id.id),
                                                                     ('shop_id', '=', shop_id),
@@ -261,8 +263,9 @@ class OrderSaveService(models.Model):
 
                         if auto_convert_dispensed:
                             _logger.debug("\n Confirming delivery and payment for the newly created sale order..")
-                            new_sale_order.action_confirm()
-                            new_sale_order.validate_payment()
+                            new_sale_order.auto_validate_delivery()
+                            if auto_invoice_dispensed == '1':
+                                new_sale_order.validate_payment()
 
                     else:
                         _logger.debug("\n There are other sale_orders at specified shop and stock location.")
@@ -301,11 +304,12 @@ class OrderSaveService(models.Model):
 
                         if auto_convert_dispensed and sale_order_to_process:
                             _logger.debug("\n Confirming delivery and payment ..")
-                            sale_order_to_process.action_confirm()
+                            sale_order_to_process.auto_validate_delivery()
                             # TODO: payment validation checks
                             # TODO: 1) Should be done through a config "sale.config.settings"[auto_invoice_dispensed]"
                             # TODO: 2) Should check the invoice amount. Odoo fails/throws-error if the invoice amount is 0.
-                            sale_order_to_process.validate_payment()
+                            if auto_invoice_dispensed == '1':
+                                sale_order_to_process.validate_payment()
 
         else:
             raise Warning("Patient Id not found in Odoo")
