@@ -263,7 +263,7 @@ class OrderSaveService(models.Model):
 
                         if auto_convert_dispensed:
                             _logger.debug("\n Confirming delivery and payment for the newly created sale order..")
-                            new_sale_order.action_confirm()
+                            new_sale_order.auto_validate_delivery()
                             if auto_invoice_dispensed == '1':
                                 new_sale_order.validate_payment()
 
@@ -304,7 +304,7 @@ class OrderSaveService(models.Model):
 
                         if auto_convert_dispensed and sale_order_to_process:
                             _logger.debug("\n Confirming delivery and payment ..")
-                            sale_order_to_process.action_confirm()
+                            sale_order_to_process.auto_validate_delivery()
                             # TODO: payment validation checks
                             # TODO: 1) Should be done through a config "sale.config.settings"[auto_invoice_dispensed]"
                             # TODO: 2) Should check the invoice amount. Odoo fails/throws-error if the invoice amount is 0.
