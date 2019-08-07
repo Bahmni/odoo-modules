@@ -37,6 +37,11 @@
                     <field name="sale_price_markup" class="oe_inline" />
                     <label for="sale_price_markup"/>
                 </div>
+                <label string="Customer Address"/>
+                <div name="auto_create_customer_address_levels_feature">
+                    <field name="auto_create_customer_address_levels" class="oe_inline" />
+                    <label for="auto_create_customer_address_levels"/>
+                </div>
 			</xpath>
 		</field>
 	</record>
