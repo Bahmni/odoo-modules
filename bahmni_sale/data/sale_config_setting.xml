@@ -17,6 +17,10 @@
                 <field name="key">auto_register_invoice_payment_for_dispensed</field>
                 <field name="value">0</field>
         </record>
+        <record id="auto_create_customer_address_levels" model="ir.config_parameter">
+                <field name="key">auto_create_customer_address_levels</field>
+                <field name="value">1</field>
+        </record>
 
 	</data>
 </odoo>

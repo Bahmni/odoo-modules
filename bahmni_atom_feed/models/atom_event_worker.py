@@ -2,6 +2,9 @@
 from odoo import models, fields, api
 import logging
 import json
+import uuid
+
+STATE_CODE_PREFIX = 'UNKNOWN-'
 _logger = logging.getLogger(__name__)
 
 
@@ -102,34 +105,75 @@ class AtomEventWorker(models.Model):
             res.update({'street': address['address1']})
         if address.get('address2'):
             res.update({'street2': address['address2']})
-        # TO FIX: once from bahmni side country name is passed properly, replace with that key
-        country = self.env.user.company_id.country_id
-        state = False
-        district = False
-        if address.get("stateProvince"):
-            state = self.env['res.country.state'].search([('name', '=ilike', address['stateProvince'])])
-            if not state:
-                # for now, from bahmni side, no country is getting passed, so using company's country id
-                state = self.env['res.country.state'].create({'name': address['stateProvince'],
-                                                              'country_id': country.id})
-            res.update({'state_id': state.id})
-        if address.get('countyDistrict'):
-            district = self.env['state.district'].search([('name', '=ilike', address['countyDistrict'])])
-            if not district:
-                district = self.env['state.district'].create({'name': address['countyDistrict'],
-                                                              'state_id': state.id if state else state,
-                                                              'country_id': country.id})
-            res.update({'district_id' : district.id})
+
+        auto_create_customer_address_levels = self.env.ref('bahmni_sale.auto_create_customer_address_levels').value
+        country = self._find_country(address)
+        state = None
+        district = None
+        if address.get("stateProvince") and country:
+            state = self._find_or_create_state(country, address['stateProvince'], auto_create_customer_address_levels)
+            if state:
+                res.update({'state_id': state.id})
+
+        if address.get('countyDistrict') and state:
+            district = self._find_or_create_district(country, state, address.get('countyDistrict'), auto_create_customer_address_levels)
+            if district:
+                res.update({'district_id': district.id})
+
         # for now, from bahmni side, Taluka is sent as address3
-        if address.get('address3'):
+        if address.get('address3') and district:
             # =ilike operator will ignore the case of letters while comparing
-            tehsil = self.env['district.tehsil'].search([('name', '=ilike', address['address3'])])
-            if not tehsil:
-                tehsil = self.env['district.tehsil'].create({'name': address['address3'],
-                                                             'district_id': district.id if district else False,
-                                                             'state_id': state.id if state else False})
-            res.update({'tehsil_id': tehsil.id})
+            tehsil = self._find_or_create_level3(state, district, address['address3'], auto_create_customer_address_levels)
+            if tehsil:
+                res.update({'tehsil_id': tehsil.id})
+
         return res
+
+    @api.model
+    def _find_country(self, address):
+        # TODO: from bahmni side, no country is getting passed, so using company's country id
+        # once from bahmni side country name is passed properly, replace with that key
+        return self.env.user.company_id.country_id
+
+    @api.model
+    def _find_or_create_level3(self, state, district, level_name, auto_create_customer_address_levels):
+        levels = self.env['district.tehsil'].search([('name', '=ilike', level_name),
+                                                    ('district_id', '=', district.id if district else False)])
+        if not levels and auto_create_customer_address_levels == '1':
+            # TODO, check if configuration enabled to create level3 if not present
+            level = self.env['district.tehsil'].create({'name': level_name,
+                                                        'district_id': district.id if district else False,
+                                                        'state_id': state.id if state else False})
+        else:
+            level = levels[0]
+        return level
+
+    @api.model
+    def _find_or_create_district(self, country, state, district_county_name, auto_create_customer_address_levels):
+        districts = self.env['state.district'].search([('name', '=ilike', district_county_name),
+                                                      ('state_id', '=', state.id if state else None)])
+        if not districts and auto_create_customer_address_levels == '1':
+            # TODO, check if configuration enabled to create state if not present
+            district = self.env['state.district'].create({'name': district_county_name,
+                                                          'state_id': state.id if state else None,
+                                                          'country_id': country.id})
+        else:
+            district = districts[0]
+        return district
+
+    @api.model
+    def _find_or_create_state(self, country, state_province_name, auto_create_customer_address_levels):
+        states = self.env['res.country.state'].search([('name', '=ilike', state_province_name),
+                                                      ('country_id', '=', country.id)])
+        if not states and auto_create_customer_address_levels == '1':
+            # TODO, check if configuration enabled to create state if not present
+            state_code = STATE_CODE_PREFIX + str(uuid.uuid4())
+            state = self.env['res.country.state'].create({'name': state_province_name,
+                                                          'code': state_code,
+                                                          'country_id': country.id})
+        else:
+            state = states[0]
+        return state
 
     def _get_customer_vals(self, vals):
         res = {}

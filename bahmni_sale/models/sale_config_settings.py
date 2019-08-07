@@ -15,6 +15,7 @@ class SaleConfigSettings(models.TransientModel):
     allow_negative_stock = fields.Boolean(string="Allow negative stock")
     sale_price_markup = fields.Boolean(string="Determine sale price based on cost price markup")
     auto_invoice_dispensed = fields.Boolean(string="Automatically register payment for dispensed order invoice")
+    auto_create_customer_address_levels = fields.Boolean(string="Automatically create customer address for state, district, level3")
 
     @api.multi
     def set_convert_dispensed(self):
@@ -64,3 +65,14 @@ class SaleConfigSettings(models.TransientModel):
         for record in self:
             value = 1 if record.auto_invoice_dispensed else 0
             self.env.ref('bahmni_sale.auto_register_invoice_payment_for_dispensed').write({'value': str(value)})
+
+    @api.model
+    def get_default_auto_create_customer_address_levels(self, fields):
+        value = int(self.env.ref('bahmni_sale.auto_create_customer_address_levels').value)
+        return {'auto_create_customer_address_levels': bool(value)}
+
+    @api.multi
+    def set_default_auto_create_customer_address_levels(self):
+        for record in self:
+            value = 1 if record.auto_create_customer_address_levels else 0
+            self.env.ref('bahmni_sale.auto_create_customer_address_levels').write({'value': str(value)})
