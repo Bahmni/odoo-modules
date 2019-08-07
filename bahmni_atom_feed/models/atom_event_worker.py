@@ -2,9 +2,9 @@
 from odoo import models, fields, api
 import logging
 import json
-import re
+import uuid
 
-STATE_CODE_UNKNOWN = 'UNKNOWN'
+STATE_CODE_PREFIX = 'UNKNOWN-'
 _logger = logging.getLogger(__name__)
 
 
@@ -167,8 +167,9 @@ class AtomEventWorker(models.Model):
                                                       ('country_id', '=', country.id)])
         if not states and auto_create_customer_address_levels == '1':
             # TODO, check if configuration enabled to create state if not present
+            state_code = STATE_CODE_PREFIX + uuid.uuid4()
             state = self.env['res.country.state'].create({'name': state_province_name,
-                                                          'code': STATE_CODE_UNKNOWN,
+                                                          'code': state_code,
                                                           'country_id': country.id})
         else:
             state = states[0]
