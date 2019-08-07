@@ -167,7 +167,7 @@ class AtomEventWorker(models.Model):
                                                       ('country_id', '=', country.id)])
         if not states and auto_create_customer_address_levels == '1':
             # TODO, check if configuration enabled to create state if not present
-            state_code = STATE_CODE_PREFIX + uuid.uuid4()
+            state_code = STATE_CODE_PREFIX + str(uuid.uuid4())
             state = self.env['res.country.state'].create({'name': state_province_name,
                                                           'code': state_code,
                                                           'country_id': country.id})
