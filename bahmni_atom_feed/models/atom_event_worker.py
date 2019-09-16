@@ -38,6 +38,8 @@ class AtomEventWorker(models.Model):
                 self.env['reference.data.service'].create_or_update_ref_data(vals, 'Test')
             elif category == "create.lab.panel":
                 self.env['reference.data.service'].create_or_update_ref_data(vals, 'Panel')
+            elif category == "create.service.sellable":
+                self.env['reference.data.service'].create_or_update_ref_data(vals, 'Others')
 
             return {'success': True}    
         except Exception as err:
