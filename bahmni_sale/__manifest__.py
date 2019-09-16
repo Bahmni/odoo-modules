@@ -17,6 +17,7 @@ Bahmni Sale
              'data/data.xml',
              'data/sale_config_setting.xml',
              'views/bahmni_sale.xml',
+             'views/res_partner_view.xml',
              'views/village_master_view.xml',
              'views/sale_order_views.xml',
              'views/sale_config_settings.xml',

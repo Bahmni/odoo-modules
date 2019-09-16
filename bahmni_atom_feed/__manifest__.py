@@ -15,7 +15,6 @@ Bahmni Web Extension
     'data': ['security/ir.model.access.csv',
          'data/mrs_person_attributes_data.xml',
 	     'views/event_records_view.xml',
-             'views/res_partner_view.xml',
              'views/res_company.xml',
              'wizard/stock_location_product_dhis2.xml',
              'views/order_type_view.xml',
