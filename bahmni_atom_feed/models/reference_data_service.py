@@ -24,8 +24,12 @@ class ReferenceDataService(models.Model):
     @api.model
     def _fill_data(self, vals, category=None):
         data = {}
-        category_name = category
-        category_hierarchy = self._get_category_hierarchy(category)
+        category_name = category if category else "Others"
+        category_hierarchy = self._get_category_hierarchy(category_name)
+        specified_product_category = vals.get("product_category")
+        if specified_product_category:
+            category_name = specified_product_category
+        _logger.info("\n******* Creating Product with Category: %s, hierarchy: %s", category_name, category_hierarchy)
         category_obj = self.env['product.category'].search([('name', '=', category_name)])
         if category_obj.read():
             category_from_db = category_obj.read()[0]
@@ -33,6 +37,7 @@ class ReferenceDataService(models.Model):
                        self._create_category_in_hierarchy(category_name, category_hierarchy).id
         else:
             categ_id = self.env['product.category'].create({'name': category_name}).id
+
         data["uuid"] = vals.get("uuid")
         data["name"] = vals.get("name")
         data["active"] = vals.get("is_active")
@@ -51,7 +56,7 @@ class ReferenceDataService(models.Model):
         elif category == 'Panel':
             return ["Lab", "Services", "All Products"]
         else:
-            return ["Services", "All Products"]
+            return ["Services", "All"]
 
     @api.model
     def _create_category_in_hierarchy(self, category_name, category_hierarchy):
@@ -67,4 +72,4 @@ class ReferenceDataService(models.Model):
             return self.env['product.category'].create({'name': category_name,
                                                         'parent_id': parent_id})
         else:
-            return self.pool.get('product.category').create({'name': category_name})
+            return self.env['product.category'].create({'name': category_name})
