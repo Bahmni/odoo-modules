@@ -42,7 +42,7 @@ class ReferenceDataService(models.Model):
         data["name"] = vals.get("name")
         data["active"] = vals.get("is_active")
         data["categ_id"] = categ_id
-        data["sale_ok"] = True
+        data["sale_ok"] = vals.get("is_active")
         data["purchase_ok"] = False
         data["type"] = "service"
         return data
