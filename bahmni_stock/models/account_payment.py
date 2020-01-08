@@ -49,7 +49,7 @@ class AccountPayment(models.Model):
         invoice_data['previous_balance'] = self.partner_id.credit or self.partner_id.debit
         invoice_data['bill_amount'] = bill_amount
         invoice_data['paid_amount'] = self.amount
-        invoice_data['outstanding_balance'] = invoice_data['previous_balance'] + invoice_data['bill_amount'] - invoice_data['paid_amount']
+        invoice_data['outstanding_balance'] = invoice_data['previous_balance']
         return invoice_data
 
     @api.multi
