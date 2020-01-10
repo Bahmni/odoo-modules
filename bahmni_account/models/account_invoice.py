@@ -1,8 +1,15 @@
 # -*- coding: utf-8 -*-
-from odoo import fields, models, api
+from odoo import fields, models, api, _
 from odoo.exceptions import UserError, ValidationError
 import logging
 _logger = logging.getLogger(__name__)
+# mapping invoice type to refund type
+TYPE2REFUND = {
+    'out_invoice': 'out_refund',        # Customer Invoice
+    'in_invoice': 'in_refund',          # Vendor Bill
+    'out_refund': 'out_invoice',        # Customer Refund
+    'in_refund': 'in_invoice',          # Vendor Refund
+}
 
 class AccountInvoice(models.Model):
     _inherit = 'account.invoice'
@@ -202,3 +209,61 @@ class AccountInvoice(models.Model):
             }
             inv.with_context(ctx).write(vals)
         return True
+
+    @api.model
+    def _prepare_refund(self, invoice, date_invoice=None, date=None, description=None, journal_id=None):
+        """ Prepare the dict of values to create the new refund from the invoice.
+            This method may be overridden to implement custom
+            refund generation (making sure to call super() to establish
+            a clean extension chain).
+
+            :param record invoice: invoice to refund
+            :param string date_invoice: refund creation date from the wizard
+            :param integer date: force date from the wizard
+            :param string description: description of the refund from the wizard
+            :param integer journal_id: account.journal from the wizard
+            :return: dict of value to create() the refund
+        """
+        values = {}
+        for field in self._get_refund_copy_fields():
+            if invoice._fields[field].type == 'many2one':
+                values[field] = invoice[field].id
+            else:
+                values[field] = invoice[field] or False
+
+        values['invoice_line_ids'] = self._refund_cleanup_lines(invoice.invoice_line_ids)
+        _logger.error(self._refund_cleanup_lines(invoice.invoice_line_ids))
+
+        tax_lines = invoice.tax_line_ids
+        taxes_to_change = {
+            line.tax_id.id: line.tax_id.refund_account_id.id
+            for line in tax_lines.filtered(lambda l: l.tax_id.refund_account_id != l.tax_id.account_id)
+        }
+        cleaned_tax_lines = self._refund_cleanup_lines(tax_lines)
+        values['tax_line_ids'] = self._refund_tax_lines_account_change(cleaned_tax_lines, taxes_to_change)
+
+        if journal_id:
+            journal = self.env['account.journal'].browse(journal_id)
+        elif invoice['type'] == 'in_invoice':
+            journal = self.env['account.journal'].search([('type', '=', 'purchase')], limit=1)
+        else:
+            journal = self.env['account.journal'].search([('type', '=', 'sale')], limit=1)
+        values['journal_id'] = journal.id
+
+        values['type'] = TYPE2REFUND[invoice['type']]
+        values['date_invoice'] = date_invoice or fields.Date.context_today(invoice)
+        values['state'] = 'draft'
+        values['number'] = False
+        values['origin'] = invoice.number
+        values['payment_term_id'] = False
+        values['refund_invoice_id'] = invoice.id
+        values['discount_type'] = invoice.discount_type
+        values['discount'] = invoice.discount
+        values['discount_percentage'] = invoice.discount_percentage
+        values['disc_acc_id'] = invoice.disc_acc_id.id
+
+        if date:
+            values['date'] = date
+        if description:
+            values['name'] = description
+        return values
