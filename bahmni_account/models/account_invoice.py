@@ -182,21 +182,22 @@ class AccountInvoice(models.Model):
             ctx_nolang.pop('lang', None)
             move = account_move.with_context(ctx_nolang).create(move_vals)
             #=============Customized code starts=========
-            if inv.discount:
-                move_line = move.line_ids.filtered(lambda l:l.name=='/')
-                move_line.debit -= inv.discount
-                move_line_vals = {
-                'name':'Discount',
-                'company_id':move.company_id.id,
-                'account_id':inv.disc_acc_id.id,
-                'debit':inv.discount,
-                'date_maturity':date,
-                'currency_id': diff_currency and inv.currency_id.id,
-                'invoice_id': inv.id,
-                'partner_id':move_line.partner_id.id,
-                'move_id':move.id,
-                }
-                self.env['account.move.line'].create(move_line_vals)
+            if inv.type != 'out_refund':
+                if inv.discount:
+                    move_line = move.line_ids.filtered(lambda l:l.name=='/')
+                    move_line.debit -= inv.discount
+                    move_line_vals = {
+                    'name':'Discount',
+                    'company_id':move.company_id.id,
+                    'account_id':inv.disc_acc_id.id,
+                    'debit':inv.discount,
+                    'date_maturity':date,
+                    'currency_id': diff_currency and inv.currency_id.id,
+                    'invoice_id': inv.id,
+                    'partner_id':move_line.partner_id.id,
+                    'move_id':move.id,
+                    }
+                    self.env['account.move.line'].create(move_line_vals)
             #===========Customized code ends=============
             # Pass invoice in context in method post: used if you want to get the same
             # account move reference when creating the same invoice after a cancelled one:
@@ -232,8 +233,6 @@ class AccountInvoice(models.Model):
                 values[field] = invoice[field] or False
 
         values['invoice_line_ids'] = self._refund_cleanup_lines(invoice.invoice_line_ids)
-        _logger.error(self._refund_cleanup_lines(invoice.invoice_line_ids))
-
         tax_lines = invoice.tax_line_ids
         taxes_to_change = {
             line.tax_id.id: line.tax_id.refund_account_id.id
