@@ -167,7 +167,6 @@ class AccountInvoice(models.Model):
 
             journal = inv.journal_id.with_context(ctx)
             line = inv.finalize_invoice_move_lines(line)
-
             date = inv.date or inv.date_invoice
             move_vals = {
                 'ref': inv.reference,
@@ -272,10 +271,12 @@ class AccountInvoice(models.Model):
         values['origin'] = invoice.number
         values['payment_term_id'] = False
         values['refund_invoice_id'] = invoice.id
+        #=============Customized code starts========= Added Custom discount fields in refund
         values['discount_type'] = invoice.discount_type
         values['discount'] = invoice.discount
         values['discount_percentage'] = invoice.discount_percentage
         values['disc_acc_id'] = invoice.disc_acc_id.id
+        #===========Customized code ends=============
 
         if date:
             values['date'] = date
