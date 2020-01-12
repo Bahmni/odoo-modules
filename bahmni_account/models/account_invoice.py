@@ -16,7 +16,7 @@ class AccountInvoice(models.Model):
 
 #     # overridden this method to deduct discounted amount from total of invoice
     @api.one
-    @api.depends('invoice_line_ids.price_subtotal', 'tax_line_ids.amount', 
+    @api.depends('invoice_line_ids.price_subtotal', 'tax_line_ids.amount',
                  'currency_id', 'company_id', 'date_invoice', 'type', 'discount')
     def _compute_amount(self):
         round_curr = self.currency_id.round
@@ -63,7 +63,7 @@ class AccountInvoice(models.Model):
             self.discount_percentage = (self.discount / amount_total) * 100
         if self.discount_percentage:
             self.discount = amount_total * self.discount_percentage / 100
-        
+
     @api.multi
     def _find_batch(self, product, qty, location, picking):
         _logger.info("\n\n***** Product :%s, Quantity :%s Location :%s\n*****",product,qty,location)
@@ -167,7 +167,7 @@ class AccountInvoice(models.Model):
 
             journal = inv.journal_id.with_context(ctx)
             line = inv.finalize_invoice_move_lines(line)
-            
+
             date = inv.date or inv.date_invoice
             move_vals = {
                 'ref': inv.reference,
@@ -182,8 +182,24 @@ class AccountInvoice(models.Model):
             ctx_nolang.pop('lang', None)
             move = account_move.with_context(ctx_nolang).create(move_vals)
             #=============Customized code starts=========
-            if inv.type != 'out_refund':
-                if inv.discount:
+            if inv.discount:
+                if inv.type == 'out_refund':
+                    move_line = move.line_ids.filtered(lambda l:l.name==inv.name)
+                    move_line.credit -= inv.discount
+                    move_line_vals = {
+                    'name':'Discount',
+                    'company_id':move.company_id.id,
+                    'account_id':inv.disc_acc_id.id,
+                    'credit':inv.discount,
+                    'date_maturity':date,
+                    'currency_id': diff_currency and inv.currency_id.id,
+                    'invoice_id': inv.id,
+                    'partner_id':move_line.partner_id.id,
+                    'move_id':move.id,
+                    }
+                    self.env['account.move.line'].create(move_line_vals)
+
+                else:
                     move_line = move.line_ids.filtered(lambda l:l.name=='/')
                     move_line.debit -= inv.discount
                     move_line_vals = {
@@ -266,3 +282,4 @@ class AccountInvoice(models.Model):
         if description:
             values['name'] = description
         return values
+
