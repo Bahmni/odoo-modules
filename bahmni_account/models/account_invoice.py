@@ -1,15 +1,22 @@
 # -*- coding: utf-8 -*-
-from odoo import fields, models, api
+from odoo import fields, models, api, _
 from odoo.exceptions import UserError, ValidationError
 import logging
 _logger = logging.getLogger(__name__)
+# mapping invoice type to refund type
+TYPE2REFUND = {
+    'out_invoice': 'out_refund',        # Customer Invoice
+    'in_invoice': 'in_refund',          # Vendor Bill
+    'out_refund': 'out_invoice',        # Customer Refund
+    'in_refund': 'in_invoice',          # Vendor Refund
+}
 
 class AccountInvoice(models.Model):
     _inherit = 'account.invoice'
 
 #     # overridden this method to deduct discounted amount from total of invoice
     @api.one
-    @api.depends('invoice_line_ids.price_subtotal', 'tax_line_ids.amount', 
+    @api.depends('invoice_line_ids.price_subtotal', 'tax_line_ids.amount',
                  'currency_id', 'company_id', 'date_invoice', 'type', 'discount')
     def _compute_amount(self):
         round_curr = self.currency_id.round
@@ -56,7 +63,7 @@ class AccountInvoice(models.Model):
             self.discount_percentage = (self.discount / amount_total) * 100
         if self.discount_percentage:
             self.discount = amount_total * self.discount_percentage / 100
-        
+
     @api.multi
     def _find_batch(self, product, qty, location, picking):
         _logger.info("\n\n***** Product :%s, Quantity :%s Location :%s\n*****",product,qty,location)
@@ -160,7 +167,6 @@ class AccountInvoice(models.Model):
 
             journal = inv.journal_id.with_context(ctx)
             line = inv.finalize_invoice_move_lines(line)
-            
             date = inv.date or inv.date_invoice
             move_vals = {
                 'ref': inv.reference,
@@ -176,20 +182,37 @@ class AccountInvoice(models.Model):
             move = account_move.with_context(ctx_nolang).create(move_vals)
             #=============Customized code starts=========
             if inv.discount:
-                move_line = move.line_ids.filtered(lambda l:l.name=='/')
-                move_line.debit -= inv.discount
-                move_line_vals = {
-                'name':'Discount',
-                'company_id':move.company_id.id,
-                'account_id':inv.disc_acc_id.id,
-                'debit':inv.discount,
-                'date_maturity':date,
-                'currency_id': diff_currency and inv.currency_id.id,
-                'invoice_id': inv.id,
-                'partner_id':move_line.partner_id.id,
-                'move_id':move.id,
-                }
-                self.env['account.move.line'].create(move_line_vals)
+                if inv.type == 'out_refund':
+                    move_line = move.line_ids.filtered(lambda l:l.name==inv.name)
+                    move_line.credit -= inv.discount
+                    move_line_vals = {
+                    'name':'Discount',
+                    'company_id':move.company_id.id,
+                    'account_id':inv.disc_acc_id.id,
+                    'credit':inv.discount,
+                    'date_maturity':date,
+                    'currency_id': diff_currency and inv.currency_id.id,
+                    'invoice_id': inv.id,
+                    'partner_id':move_line.partner_id.id,
+                    'move_id':move.id,
+                    }
+                    self.env['account.move.line'].create(move_line_vals)
+
+                else:
+                    move_line = move.line_ids.filtered(lambda l:l.name=='/')
+                    move_line.debit -= inv.discount
+                    move_line_vals = {
+                    'name':'Discount',
+                    'company_id':move.company_id.id,
+                    'account_id':inv.disc_acc_id.id,
+                    'debit':inv.discount,
+                    'date_maturity':date,
+                    'currency_id': diff_currency and inv.currency_id.id,
+                    'invoice_id': inv.id,
+                    'partner_id':move_line.partner_id.id,
+                    'move_id':move.id,
+                    }
+                    self.env['account.move.line'].create(move_line_vals)
             #===========Customized code ends=============
             # Pass invoice in context in method post: used if you want to get the same
             # account move reference when creating the same invoice after a cancelled one:
@@ -202,3 +225,62 @@ class AccountInvoice(models.Model):
             }
             inv.with_context(ctx).write(vals)
         return True
+
+    @api.model
+    def _prepare_refund(self, invoice, date_invoice=None, date=None, description=None, journal_id=None):
+        """ Prepare the dict of values to create the new refund from the invoice.
+            This method may be overridden to implement custom
+            refund generation (making sure to call super() to establish
+            a clean extension chain).
+
+            :param record invoice: invoice to refund
+            :param string date_invoice: refund creation date from the wizard
+            :param integer date: force date from the wizard
+            :param string description: description of the refund from the wizard
+            :param integer journal_id: account.journal from the wizard
+            :return: dict of value to create() the refund
+        """
+        values = {}
+        for field in self._get_refund_copy_fields():
+            if invoice._fields[field].type == 'many2one':
+                values[field] = invoice[field].id
+            else:
+                values[field] = invoice[field] or False
+
+        values['invoice_line_ids'] = self._refund_cleanup_lines(invoice.invoice_line_ids)
+        tax_lines = invoice.tax_line_ids
+        taxes_to_change = {
+            line.tax_id.id: line.tax_id.refund_account_id.id
+            for line in tax_lines.filtered(lambda l: l.tax_id.refund_account_id != l.tax_id.account_id)
+        }
+        cleaned_tax_lines = self._refund_cleanup_lines(tax_lines)
+        values['tax_line_ids'] = self._refund_tax_lines_account_change(cleaned_tax_lines, taxes_to_change)
+
+        if journal_id:
+            journal = self.env['account.journal'].browse(journal_id)
+        elif invoice['type'] == 'in_invoice':
+            journal = self.env['account.journal'].search([('type', '=', 'purchase')], limit=1)
+        else:
+            journal = self.env['account.journal'].search([('type', '=', 'sale')], limit=1)
+        values['journal_id'] = journal.id
+
+        values['type'] = TYPE2REFUND[invoice['type']]
+        values['date_invoice'] = date_invoice or fields.Date.context_today(invoice)
+        values['state'] = 'draft'
+        values['number'] = False
+        values['origin'] = invoice.number
+        values['payment_term_id'] = False
+        values['refund_invoice_id'] = invoice.id
+        #=============Customized code starts========= Added Custom discount fields in refund
+        values['discount_type'] = invoice.discount_type
+        values['discount'] = invoice.discount
+        values['discount_percentage'] = invoice.discount_percentage
+        values['disc_acc_id'] = invoice.disc_acc_id.id
+        #===========Customized code ends=============
+
+        if date:
+            values['date'] = date
+        if description:
+            values['name'] = description
+        return values
+
