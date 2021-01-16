@@ -127,9 +127,6 @@ class SaleOrder(models.Model):
                 discount = amount_total - self.chargeable_amount
                 self.discount_percentage = (discount / amount_total) * 100
         else:
-            if self.discount_type == 'none':
-                self.discount_percentage = 0
-                self.discount = 0
             if self.discount:
                 self.discount_percentage = (self.discount / amount_total) * 100
             if self.discount_percentage:
