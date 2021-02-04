@@ -46,10 +46,10 @@ class AccountPayment(models.Model):
         invoice_data['amount_untaxed'] = amount_untaxed
         invoice_data['discount'] = discount
         invoice_data['net_amount'] = invoice_data['taxes'] + invoice_data['amount_untaxed'] - invoice_data['discount']
-        invoice_data['previous_balance'] = self.partner_id.credit or self.partner_id.debit
-        invoice_data['bill_amount'] = bill_amount
+        invoice_data['outstanding_balance'] = self.partner_id.credit or self.partner_id.debit
         invoice_data['paid_amount'] = self.amount
-        invoice_data['outstanding_balance'] = invoice_data['previous_balance']
+        invoice_data['previous_balance'] = invoice_data['outstanding_balance'] - (bill_amount - invoice_data['paid_amount'])
+        invoice_data['bill_amount'] = invoice_data['net_amount'] + invoice_data['previous_balance']
         return invoice_data
 
     @api.multi
