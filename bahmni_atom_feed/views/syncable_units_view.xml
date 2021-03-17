@@ -8,6 +8,7 @@
 			<form string="Syncable Units"> 
 				<group>
 					<field name="name"/>
+					<field name="unit_of_measure" />
 				</group>
 			</form>
 		</field>
@@ -19,6 +20,7 @@
 		<field name="arch" type="xml">
 			<tree string="Syncable Units">
 				<field name="name"/>
+				<field name="unit_of_measure" />
 			</tree>
 		</field>
 	</record>

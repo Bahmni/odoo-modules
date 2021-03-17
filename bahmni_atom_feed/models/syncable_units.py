@@ -7,3 +7,4 @@ class SyncableUnits(models.Model):
     _description = "Units allowed to Sync as it is"
 
     name = fields.Char(string="Unit Name", required=True)
+    unit_of_measure = fields.Many2one('product.uom', string="Unit of measure")
