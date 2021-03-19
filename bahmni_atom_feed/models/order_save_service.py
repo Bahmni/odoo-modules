@@ -385,17 +385,17 @@ class OrderSaveService(models.Model):
         
     @api.model
     def _get_order_quantity(self, order, default_quantity_value):
-        if(not self.env['syncable.units'].search([('name', '=', order['quantityUnits'])])):
+        if(not self.env['syncable.units.mapping'].search([('name', '=', order['quantityUnits'])])):
             return default_quantity_value
         return order['quantity']
 
     @api.model
     def _get_order_line_uom(self, order_line, product_default_uom):
         
-        uom_ids = self.env['syncable.units'].search([('name', '=', order_line['quantityUnits'])])
+        uom_ids = self.env['syncable.units.mapping'].search([('name', '=', order_line['quantityUnits'])])
         if(uom_ids):
             uom_id = uom_ids.ids[0]
-            uom_obj = self.env['syncable.units'].browse(uom_id)
+            uom_obj = self.env['syncable.units.mapping'].browse(uom_id)
             if(uom_obj.unit_of_measure):
                 return uom_obj.unit_of_measure.id
         return product_default_uom
@@ -425,7 +425,7 @@ class OrderSaveService(models.Model):
             product_uom_qty = order['quantity']
             if(prod_lot != None and order['quantity'] > prod_lot.stock_forecast):
                 product_uom_qty = prod_lot.stock_forecast
-            description = " ".join([str(prod_obj.name), "-", str(product_uom_qty), str(order.get('quantityUnits', None))])
+            description = " ".join([str(prod_obj.name), "- Total", str(product_uom_qty), str(order.get('quantityUnits', None))])
             order_line_dispensed = True if order.get('dispensed') == 'true' or (order.get('dispensed') and order.get('dispensed') != 'false') else False
             sale_order_line = {
                 'product_id': prod_id,
