@@ -1,0 +1,26 @@
+name: Continuous Integration-v0.94
+on:
+  push:
+    branches:
+      - master
+  repository_dispatch:
+    types: ["bahmni-package-0.94-trigger"]
+  workflow_dispatch:
+env:
+  BAHMNI_VERSION: 0.94
+jobs:
+  build-package:
+    name: Test and Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Odoo Modules Repo
+        uses: actions/checkout@v2
+        with:
+          path: odoo-modules
+      - name: Package
+        run: zip -r odoo-modules.zip odoo-modules --exclude=*.git* --exclude=*.git*
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: odoo-modules
+          path: odoo-modules.zip
