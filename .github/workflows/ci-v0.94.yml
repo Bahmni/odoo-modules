@@ -8,6 +8,7 @@ on:
   workflow_dispatch:
 env:
   BAHMNI_VERSION: 0.94
+  BRANCH_NAME: master
 jobs:
   build-package:
     name: Test and Package
@@ -16,6 +17,7 @@ jobs:
       - name: Checkout Odoo Modules Repo
         uses: actions/checkout@v2
         with:
+          ref: ${{ env.BRANCH_NAME }}
           path: odoo-modules
       - name: Package
         run: zip -r odoo-modules.zip odoo-modules --exclude=*.git* --exclude=*.git*
@@ -37,11 +39,13 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Bahmni/bahmni-package
+          ref: ${{ env.BRANCH_NAME }}
           path: bahmni-package
       - name: Checkout emr-functional-tests
         uses: actions/checkout@v2
         with:
           repository: Bahmni/emr-functional-tests
+          ref: ${{ env.BRANCH_NAME }}
           path: emr-functional-tests
       - uses: actions/download-artifact@v2
         with:
