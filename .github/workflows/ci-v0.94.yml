@@ -1,0 +1,62 @@
+name: Continuous Integration-v0.94
+on:
+  push:
+    branches:
+      - master
+  repository_dispatch:
+    types: ["bahmni-package-0.94-trigger","emr-functional-tests-0.94-trigger"]
+  workflow_dispatch:
+env:
+  BAHMNI_VERSION: 0.94
+  BRANCH_NAME: master
+jobs:
+  build-package:
+    name: Test and Package
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Odoo Modules Repo
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ env.BRANCH_NAME }}
+          path: odoo-modules
+      - name: Package
+        run: zip -r odoo-modules.zip odoo-modules --exclude=*.git* --exclude=*.git*
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: odoo-modules
+          path: odoo-modules.zip
+  docker-build-publish:
+    name: Build & Publish Docker Image
+    needs: build-package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '8'
+      - name: Checkout bahmni-package
+        uses: actions/checkout@v2
+        with:
+          repository: Bahmni/bahmni-package
+          ref: ${{ env.BRANCH_NAME }}
+          path: bahmni-package
+      - name: Checkout emr-functional-tests
+        uses: actions/checkout@v2
+        with:
+          repository: Bahmni/emr-functional-tests
+          ref: ${{ env.BRANCH_NAME }}
+          path: emr-functional-tests
+      - uses: actions/download-artifact@v2
+        with:
+          name: odoo-modules
+          path: bahmni-package/bahmni-erp/resources
+      - name: Build Docker Image
+        run: ./bahmni-package/bahmni-docker/build_scripts/bahmni-erp/docker_build.sh
+      - name: List Docker Images
+        run: docker images
+      - name: Push Docker Images
+        run: ./bahmni-package/bahmni-docker/build_scripts/bahmni-erp/docker_publish.sh
+        env:
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN}}
