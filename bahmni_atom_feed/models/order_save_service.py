@@ -3,6 +3,9 @@ from datetime import datetime
 import json
 from itertools import groupby
 import logging
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
 
 from odoo import fields, models, api
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
