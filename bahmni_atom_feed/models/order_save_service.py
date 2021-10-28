@@ -3,9 +3,6 @@ from datetime import datetime
 import json
 from itertools import groupby
 import logging
-import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
 
 from odoo import fields, models, api
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT as DTF
@@ -428,7 +425,7 @@ class OrderSaveService(models.Model):
             product_uom_qty = order['quantity']
             if(prod_lot != None and order['quantity'] > prod_lot.stock_forecast):
                 product_uom_qty = prod_lot.stock_forecast
-            description = " ".join([str(prod_obj.name), "- Total", str(product_uom_qty), str(order.get('quantityUnits', None))])
+            description = " ".join([prod_obj.name, "- Total", str(product_uom_qty), str(order.get('quantityUnits', None))])
             order_line_dispensed = True if order.get('dispensed') == 'true' or (order.get('dispensed') and order.get('dispensed') != 'false') else False
             sale_order_line = {
                 'product_id': prod_id,
