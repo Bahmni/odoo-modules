@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
 import atom_event_worker
 import event_records
 import reference_data_service
