@@ -2,9 +2,11 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - BAH-1413
+      - master
+    paths-ignore: 
+      - '**.md'
   repository_dispatch:
-    types: ["bahmni-package-trigger","bahmni-scripts-trigger"]
+    types: ["bahmni-package-trigger", "bahmni-scripts-trigger"]
   workflow_dispatch:
 env:
   BAHMNI_VERSION: 0.94
@@ -32,10 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-java@v2
-        with:
-          distribution: 'zulu'
-          java-version: '8'
       - name: Checkout bahmni-scripts
         uses: actions/checkout@v2
         with:
