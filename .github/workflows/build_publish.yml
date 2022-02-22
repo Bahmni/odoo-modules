@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: Build and Publish
 on:
   push:
     branches:
@@ -6,49 +6,33 @@ on:
     paths-ignore: 
       - '**.md'
   repository_dispatch:
-    types: ["bahmni-package-trigger", "bahmni-scripts-trigger"]
+    types: ["bahmni-scripts-trigger"]
   workflow_dispatch:
 env:
   BAHMNI_VERSION: 0.94
   BRANCH_NAME: master
 jobs:
-  build-package:
-    name: Test and Package
+  docker-build-publish:
+    name: Docker Build & Publish
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Odoo Modules Repo
         uses: actions/checkout@v2
         with:
           ref: ${{ env.BRANCH_NAME }}
-          path: odoo-modules
       - name: Package
-        run: zip -r odoo-modules.zip odoo-modules --exclude=*.git* --exclude=*.git*
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: odoo-modules
-          path: odoo-modules.zip
-  docker-build-publish:
-    name: Build & Publish Docker Image
-    needs: build-package
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Checkout bahmni-scripts
+        run: zip -r package/resources/odoo-modules.zip . --exclude=*.git* --exclude="package/*"
+      - name: Extract DB Backup
         uses: actions/checkout@v2
         with:
           repository: Bahmni/bahmni-scripts
           ref: ${{ env.BRANCH_NAME }}
           path: bahmni-scripts
-      - uses: actions/download-artifact@v2
-        with:
-          name: odoo-modules
-          path: package/resources
       - name: Build Docker Image
         run: ./package/docker/scripts/docker_build.sh
       - name: List Docker Images
         run: docker images
-      - name: Push Docker Images
+      - name: Publish Docker Images
         run: ./package/docker/scripts/docker_publish.sh
         env:
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
