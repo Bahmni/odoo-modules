@@ -7,7 +7,8 @@ cp bahmni-scripts/demo/db-backups/v0.92/odoo_backup.sql package/resources/odoo_d
 
 cd package
 # Unzipping Odoo Modules copied by CI
-unzip -q -u -d build/ resources/odoo-modules.zip
+mkdir -p build/odoo-modules
+unzip -q -u -d build/odoo-modules resources/odoo-modules.zip
 #Building Docker images
 ODOO_IMAGE_TAG=${BAHMNI_VERSION}-${GITHUB_RUN_NUMBER}
 docker build -t bahmni/odoo-10-db:fresh-${ODOO_IMAGE_TAG} -f docker/db.Dockerfile  . --no-cache

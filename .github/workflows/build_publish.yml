@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 env:
   BAHMNI_VERSION: 0.94
-  BRANCH_NAME: master
+
 jobs:
   docker-build-publish:
     name: Docker Build & Publish
@@ -19,15 +19,12 @@ jobs:
     steps:
       - name: Checkout Odoo Modules Repo
         uses: actions/checkout@v2
-        with:
-          ref: ${{ env.BRANCH_NAME }}
       - name: Package
         run: zip -r package/resources/odoo-modules.zip . --exclude=*.git* --exclude="package/*"
       - name: Extract DB Backup
         uses: actions/checkout@v2
         with:
           repository: Bahmni/bahmni-scripts
-          ref: ${{ env.BRANCH_NAME }}
           path: bahmni-scripts
       - name: Build Docker Image
         run: ./package/docker/scripts/docker_build.sh
