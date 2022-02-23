@@ -1,30 +1,33 @@
-name: Build and Publish Odoo
+name: Build and Publish Odoo Demo DB
 on:
   push:
     branches:
       - master
       - BAH-1413
-    paths-ignore: 
-      - '**.md'
+    paths: 
+      - 'package/resources/setupDB.sql'
+      - 'package/docker/scripts/configureDemoDB.sh'
+      - 'package/docker/demodb.Dockerfile'
+      - 'package/docker/scripts/docker_build_odoo_demoDB.sh'
+      - 'package/docker/scripts/docker_publish_odoo_demoDB.sh'
+
   workflow_dispatch:
 env:
   BAHMNI_VERSION: 0.94
 
 jobs:
   docker-build-publish:
-    name: Docker Build & Publish Odoo
+    name: Docker Build & Publish Odoo Demo DB
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Odoo Modules Repo
         uses: actions/checkout@v2
-      - name: Package
-        run: zip -r package/resources/odoo-modules.zip . --exclude=*.git* --exclude="package/*"
       - name: Build Docker Image
-        run: ./package/docker/scripts/docker_build_odoo.sh
+        run: ./package/docker/scripts/docker_build_odoo_demoDB.sh
       - name: List Docker Images
         run: docker images
       - name: Publish Docker Images
-        run: ./package/docker/scripts/docker_publish_odoo.sh
+        run: ./package/docker/scripts/docker_publish_odoo_demoDB.sh
         env:
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
           DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN}}

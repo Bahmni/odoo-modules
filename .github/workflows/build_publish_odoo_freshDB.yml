@@ -1,0 +1,34 @@
+name: Build and Publish Odoo Fresh DB
+on:
+  push:
+    branches:
+      - master
+      - BAH-1413
+    paths: 
+      - 'package/resources/odoo_clean_dump.sql'
+      - 'package/resources/setupDB.sql'
+      - 'package/docker/scripts/configureDB.sh'
+      - 'package/docker/db.Dockerfile'
+      - 'package/docker/scripts/docker_build_odoo_freshDB.sh'
+      - 'package/docker/scripts/docker_publish_odoo_freshDB.sh'
+
+  workflow_dispatch:
+env:
+  BAHMNI_VERSION: 0.94
+
+jobs:
+  docker-build-publish:
+    name: Docker Build & Publish Odoo Fresh DB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Odoo Modules Repo
+        uses: actions/checkout@v2
+      - name: Build Docker Image
+        run: ./package/docker/scripts/docker_build_odoo_freshDB.sh
+      - name: List Docker Images
+        run: docker images
+      - name: Publish Docker Images
+        run: ./package/docker/scripts/docker_publish_odoo_freshDB.sh
+        env:
+          DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+          DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN}}
