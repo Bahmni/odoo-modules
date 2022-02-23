@@ -1,12 +1,11 @@
-name: Build and Publish
+name: Build and Publish Odoo
 on:
   push:
     branches:
       - master
+      - BAH-1413
     paths-ignore: 
       - '**.md'
-  repository_dispatch:
-    types: ["bahmni-scripts-trigger"]
   workflow_dispatch:
 env:
   BAHMNI_VERSION: 0.94
@@ -20,17 +19,12 @@ jobs:
         uses: actions/checkout@v2
       - name: Package
         run: zip -r package/resources/odoo-modules.zip . --exclude=*.git* --exclude="package/*"
-      - name: Extract DB Backup
-        uses: actions/checkout@v2
-        with:
-          repository: Bahmni/bahmni-scripts
-          path: bahmni-scripts
       - name: Build Docker Image
-        run: ./package/docker/scripts/docker_build.sh
+        run: ./package/docker/scripts/docker_build_odoo.sh
       - name: List Docker Images
         run: docker images
       - name: Publish Docker Images
-        run: ./package/docker/scripts/docker_publish.sh
+        run: ./package/docker/scripts/docker_publish_odoo.sh
         env:
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
           DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN}}
