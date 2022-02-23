@@ -29,12 +29,14 @@ jobs:
           path: bahmni-scripts
       - name: Checkout Odoo Modules Repo
         uses: actions/checkout@v2
+        with:
+          path: odoo-modules
       - name: Build Docker Image
-        run: ./package/docker/scripts/docker_build_odoo_demoDB.sh
+        run: cd odoo-modules && ./package/docker/scripts/docker_build_odoo_demoDB.sh
       - name: List Docker Images
         run: docker images
       - name: Publish Docker Images
-        run: ./package/docker/scripts/docker_publish_odoo_demoDB.sh
+        run: cd odoo-modules && ./package/docker/scripts/docker_publish_odoo_demoDB.sh
         env:
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
           DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN}}
