@@ -4,7 +4,8 @@ on:
     branches:
       - master
       - BAH-1413
-    paths: 
+    paths:
+      - '.github/workflows/build_publish_odoo_demoDB.yml' 
       - 'package/resources/setupDB.sql'
       - 'package/docker/scripts/configureDemoDB.sh'
       - 'package/docker/demodb.Dockerfile'
