@@ -10,7 +10,8 @@ on:
       - 'package/docker/demodb.Dockerfile'
       - 'package/docker/scripts/docker_build_odoo_demoDB.sh'
       - 'package/docker/scripts/docker_publish_odoo_demoDB.sh'
-
+  repository_dispatch:
+    types: ["bahmni-scripts-trigger"]
   workflow_dispatch:
 env:
   BAHMNI_VERSION: 0.94
@@ -20,6 +21,11 @@ jobs:
     name: Docker Build & Publish Odoo Demo DB
     runs-on: ubuntu-latest
     steps:
+      - name: Extract DB Backup from bahmni-scripts
+        uses: actions/checkout@v2
+        with:
+          repository: Bahmni/bahmni-scripts
+          path: bahmni-scripts
       - name: Checkout Odoo Modules Repo
         uses: actions/checkout@v2
       - name: Build Docker Image
