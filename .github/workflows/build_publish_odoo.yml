@@ -16,7 +16,7 @@ on:
       - 'package/docker/scripts/docker_build_odoo_demoDB.sh'
       - 'package/docker/scripts/docker_publish_odoo_freshDB.sh'
       - 'package/docker/scripts/docker_publish_odoo_demoDB.sh'
-  workflow_dispatch:
+
 env:
   BAHMNI_VERSION: 0.94
 

@@ -12,7 +12,7 @@ on:
       - 'package/docker/scripts/docker_publish_odoo_demoDB.sh'
   repository_dispatch:
     types: ["bahmni-scripts-trigger"]
-  workflow_dispatch:
+
 env:
   BAHMNI_VERSION: 0.94
 
