@@ -6,6 +6,17 @@ on:
       - BAH-1413
     paths-ignore: 
       - '**.md'
+      - '.github/workflows/build_publish_odoo_freshDB.yml'
+      - '.github/workflows/build_publish_odoo_demoDB.yml'
+      - 'package/resources/odoo_clean_dump.sql'
+      - 'package/resources/setupDB.sql'
+      - 'package/docker/scripts/configureDB.sh'
+      - 'package/docker/scripts/configureDemoDB.sh'
+      - 'package/docker/demodb.Dockerfile'
+      - 'package/docker/scripts/docker_build_odoo_freshDB.sh'
+      - 'package/docker/scripts/docker_build_odoo_demoDB.sh'
+      - 'package/docker/scripts/docker_publish_odoo_freshDB.sh'
+      - 'package/docker/scripts/docker_publish_odoo_demoDB.sh'
   workflow_dispatch:
 env:
   BAHMNI_VERSION: 0.94
