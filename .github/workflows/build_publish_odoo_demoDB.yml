@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - BAH-1413
     paths:
       - '.github/workflows/build_publish_odoo_demoDB.yml' 
       - 'package/resources/setupDB.sql'

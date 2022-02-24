@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - BAH-1413
     paths: 
       - '.github/workflows/build_publish_odoo_freshDB.yml'
       - 'package/resources/odoo_clean_dump.sql'
