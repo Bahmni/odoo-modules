@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - BAH-1413
     paths-ignore:
       - "**.md"
       - ".github/workflows/build_publish_odoo_freshDB.yml"
