@@ -3,19 +3,15 @@ on:
   push:
     branches:
       - master
-    paths-ignore: 
-      - '**.md'
-      - '.github/workflows/build_publish_odoo_freshDB.yml'
-      - '.github/workflows/build_publish_odoo_demoDB.yml'
-      - 'package/resources/odoo_clean_dump.sql'
-      - 'package/resources/setupDB.sql'
-      - 'package/docker/scripts/configureDB.sh'
-      - 'package/docker/scripts/configureDemoDB.sh'
-      - 'package/docker/demodb.Dockerfile'
-      - 'package/docker/scripts/docker_build_odoo_freshDB.sh'
-      - 'package/docker/scripts/docker_build_odoo_demoDB.sh'
-      - 'package/docker/scripts/docker_publish_odoo_freshDB.sh'
-      - 'package/docker/scripts/docker_publish_odoo_demoDB.sh'
+      - BAH-1413
+    paths-ignore:
+      - "**.md"
+      - ".github/workflows/build_publish_odoo_freshDB.yml"
+      - ".github/workflows/build_publish_odoo_demoDB.yml"
+      - "package/resources/odoo_clean_dump.sql"
+      - "package/resources/setupDB.sql"
+      - "package/docker/demoDB/**"
+      - "package/docker/freshDB/**"
 
 env:
   BAHMNI_VERSION: 0.94
@@ -30,11 +26,9 @@ jobs:
       - name: Package
         run: zip -r package/resources/odoo-modules.zip . --exclude=*.git* --exclude="package/*"
       - name: Build Docker Image
-        run: ./package/docker/scripts/docker_build_odoo.sh
-      - name: List Docker Images
-        run: docker images
+        run: ./package/docker/odoo/docker_build.sh
       - name: Publish Docker Images
-        run: ./package/docker/scripts/docker_publish_odoo.sh
+        run: ./package/docker/docker_publish.sh bahmni/odoo-10
         env:
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
           DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN}}

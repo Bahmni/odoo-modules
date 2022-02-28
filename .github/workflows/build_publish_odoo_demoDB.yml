@@ -3,13 +3,13 @@ on:
   push:
     branches:
       - master
+      - BAH-1413
     paths:
-      - '.github/workflows/build_publish_odoo_demoDB.yml' 
-      - 'package/resources/setupDB.sql'
-      - 'package/docker/scripts/configureDemoDB.sh'
-      - 'package/docker/demodb.Dockerfile'
-      - 'package/docker/scripts/docker_build_odoo_demoDB.sh'
-      - 'package/docker/scripts/docker_publish_odoo_demoDB.sh'
+      - ".github/workflows/build_publish_odoo_demoDB.yml"
+      - "package/resources/setupDB.sql"
+      - "package/docker/demoDB/**"
+      - "package/docker/docker_publish.sh"
+
   repository_dispatch:
     types: ["bahmni-scripts-trigger"]
 
@@ -31,11 +31,9 @@ jobs:
         with:
           path: odoo-modules
       - name: Build Docker Image
-        run: cd odoo-modules && ./package/docker/scripts/docker_build_odoo_demoDB.sh
-      - name: List Docker Images
-        run: docker images
+        run: cd odoo-modules && ./package/docker/demoDB/docker_build.sh
       - name: Publish Docker Images
-        run: cd odoo-modules && ./package/docker/scripts/docker_publish_odoo_demoDB.sh
+        run: cd odoo-modules && ./package/docker/docker_publish.sh bahmni/odoo-10-db
         env:
           DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
           DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN}}

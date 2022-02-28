@@ -8,4 +8,4 @@ unzip -q -u -d build/odoo-modules resources/odoo-modules.zip
 
 #Building Docker images
 ODOO_IMAGE_TAG=${BAHMNI_VERSION}-${GITHUB_RUN_NUMBER}
-docker build -t bahmni/odoo-10:${ODOO_IMAGE_TAG} -f docker/Dockerfile  . --no-cache
+docker build -t bahmni/odoo-10:${ODOO_IMAGE_TAG} -t bahmni/odoo-10:latest -f docker/odoo/Dockerfile  . --no-cache
