@@ -1,5 +1,6 @@
 FROM postgres:9.6-alpine
 
-COPY resources/setupDB.sql /resources/setupDB.sql
-COPY resources/odoo_demo_dump.sql /resources/odoo_demo_dump.sql
-COPY docker/demoDB/configureDemoDB.sh /docker-entrypoint-initdb.d/configureDemoDB.sh
+ADD https://github.com/Bahmni/bahmni-scripts/blob/master/demo/db-backups/v0.92/odoo_backup.sql.gz?raw=true /resources/
+RUN gunzip /resources/odoo_backup.sql.gz && chmod +rx /resources/*.sql
+COPY package/resources/setupDB.sql /resources/setupDB.sql
+COPY package/docker/demoDB/configureDemoDB.sh /docker-entrypoint-initdb.d/configureDemoDB.sh
