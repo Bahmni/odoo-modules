@@ -1,0 +1,17 @@
+.git/
+**/*.log*
+**/.idea/
+**/*.iml
+**/*.ipr
+**/*.iws
+**/*.jasper
+**/*.DS_Store
+**/*.class
+**/junit
+**/build/
+**/*.pyc
+*.md
+LICENSE
+NOTICE
+docs/
+.github/
