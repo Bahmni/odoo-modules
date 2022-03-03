@@ -1,0 +1,32 @@
+name: Build and Publish Odoo
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - "**.md"
+      - ".github/workflows/build_publish_odoo_freshDB.yml"
+      - ".github/workflows/build_publish_odoo_demoDB.yml"
+      - "package/docker/demoDB/**"
+      - "package/docker/freshDB/**"
+      - "package/resources/database/**"
+
+env:
+  BAHMNI_VERSION: 0.94
+
+jobs:
+  docker-build-publish:
+    name: Docker Build & Publish Odoo
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Docker Build and push
+        uses: docker/build-push-action@v2
+        with:
+          file: package/docker/odoo/Dockerfile
+          push: true
+          tags: bahmni/odoo-10:${{env.BAHMNI_VERSION}}-${{github.run_number}},bahmni/odoo-10:latest

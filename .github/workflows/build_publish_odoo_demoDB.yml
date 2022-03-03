@@ -1,0 +1,32 @@
+name: Build and Publish Odoo Demo DB
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/workflows/build_publish_odoo_demoDB.yml"
+      - "package/resources/database/**"
+      - "package/docker/demoDB/**"
+
+  repository_dispatch:
+    types: ["bahmni-scripts-trigger"]
+
+env:
+  BAHMNI_VERSION: 0.94
+
+jobs:
+  docker-build-publish:
+    name: Docker Build & Publish Odoo Demo DB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v1 
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Docker Build and push
+        uses: docker/build-push-action@v2
+        with:
+          file: package/docker/demoDB/Dockerfile
+          push: true
+          tags: bahmni/odoo-10-db:demo-${{env.BAHMNI_VERSION}}-${{github.run_number}},bahmni/odoo-10-db:demo-latest
