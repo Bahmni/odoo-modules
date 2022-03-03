@@ -7,10 +7,9 @@ on:
       - "**.md"
       - ".github/workflows/build_publish_odoo_freshDB.yml"
       - ".github/workflows/build_publish_odoo_demoDB.yml"
-      - "package/resources/odoo_clean_dump.sql"
-      - "package/resources/setupDB.sql"
       - "package/docker/demoDB/**"
       - "package/docker/freshDB/**"
+      - "package/resources/database/**"
 
 env:
   BAHMNI_VERSION: 0.94

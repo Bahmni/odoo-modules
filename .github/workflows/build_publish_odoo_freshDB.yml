@@ -5,8 +5,7 @@ on:
       - master
     paths:
       - ".github/workflows/build_publish_odoo_freshDB.yml"
-      - "package/resources/odoo_clean_dump.sql"
-      - "package/resources/setupDB.sql"
+      - "package/resources/database/**"
       - "package/docker/freshDB/**"
 
 env:
