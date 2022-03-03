@@ -1,4 +1,4 @@
-FROM odoo@sha256:7bbade53c6b07b5c31046ab5d85d9f7c9115d731ec585c2146b8005bb2944d39
+FROM odoo:10
 
 ENV ADDON_PATH=/opt/bahmni-erp/bahmni-addons
 
