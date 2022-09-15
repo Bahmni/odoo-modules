@@ -1,0 +1,113 @@
+plugins {
+    id "nebula.ospackage" version "3.4.0"
+    id "de.undercouch.download" version "2.1.0"
+}
+
+import de.undercouch.gradle.tasks.download.Download
+
+group 'org.bahmni.erp'
+version project.version
+
+//The openerp-modules.zip file will be copied by the CI server after the artifacts are built.
+task extractAddons(type: Copy) {
+    from zipTree(file("${projectDir}/resources/odoo-modules.zip"))
+    into file("${buildDir}/bahmni-addons/odoo-modules/")
+}
+
+ospackage {
+    packageName = 'bahmni-erp'
+    version = project.version
+    release = project.hasProperty('release') ? project.release : ""
+    arch = NOARCH
+    os = LINUX
+    user = 'odoo'
+
+    into '/opt/bahmni-erp'
+
+    from("${buildDir}/bahmni-addons/odoo-modules/") {
+        fileMode = 0755
+        createDirectoryEntry = true
+        into 'bahmni-addons'
+    }
+
+    from("${projectDir}/scripts/rpm/") {
+        fileMode = 0744
+        createDirectoryEntry = true
+        into 'bin'
+    }
+
+    from("${projectDir}/resources/") {
+        fileMode = 0644
+        createDirectoryEntry = true
+        into 'db-dump'
+        include('odoo_clean_dump.sql')
+        include('odoo_demo_dump.sql')
+    }
+
+    from("${buildDir}/odoo_10.0.20190619.zip") {
+        fileMode = 0644
+        createDirectoryEntry = true
+        into "."
+    }
+}
+
+buildRpm {
+    dependsOn 'downloadOpenERP', extractAddons
+
+    requires('python-psycopg2')
+    requires('python-lxml')
+    requires('python-xmltramp')
+    requires('python-setuptools')
+    requires('libxslt-python')
+    requires('python-matplotlib')
+    requires('python-babel')
+    requires('python-mako')
+    requires('python-dateutil')
+    requires('python-psycopg2')
+    requires('pychart')
+    requires('python2-pydot')
+    requires('python-reportlab')
+    requires('python-devel')
+    requires('python-imaging')
+    requires('python-vobject')
+    requires('python-ldap')
+    requires('python-openid')
+    requires('python-werkzeug')
+    requires('python-vatnumber')
+    requires('python-dateutil')
+    requires('pygtk2')
+    requires('glade3')
+    requires('python2-pydot')
+    requires('python-matplotlib')
+    requires('python')
+    requires('python-psutil')
+    requires('python-docutils')
+    requires('make')
+    requires('automake')
+    requires('gcc')
+    requires('gcc-c++')
+    requires('kernel-devel')
+    requires('byacc')
+    requires('poppler-utils')
+    requires('postgresql96-libs')
+    requires('postgresql96')
+    requires('python-unittest2')
+    requires('python-simplejson')
+    requires('PyYAML')
+    requires('python-mock')
+    requires('python-pip')
+    requires('python-feedparser')
+    requires('python-gevent')
+
+    postInstall file("${projectDir}/scripts/postinstall.sh")
+    preInstall file("${projectDir}/scripts/preinstall.sh")
+    preUninstall file("${projectDir}/scripts/preuninstall.sh")
+}
+
+
+task downloadOpenERP(type: Download) {
+    onlyIf { !(new File("${buildDir}/odoo_10.0.20190619.zip").exists()) }
+
+    src 'http://repo.mybahmni.org.s3.amazonaws.com/packages/servers/odoo_10.0.20190619.zip'
+    dest buildDir
+}
