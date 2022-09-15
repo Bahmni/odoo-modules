@@ -3,7 +3,7 @@
 revision='{
     "github_actions" : "https://github.com/Bahmni/odoo-modules/actions/runs/GITHUB_RUN_ID/",
     "github": {
-        "openerp_modules" : "https://github.com/Bahmni/openerp-modules/commit/_modulesSha_",
+        "openerp_modules" : "https://github.com/Bahmni/openerp-modules/commit/_modulesSha_"
     }
 }'
 
