@@ -5,7 +5,7 @@ on:
       - master
     paths:
       - ".github/workflows/build_publish_odoo_freshDB.yml"
-      - "package/resources/database/**"
+      - "package/docker/resources/database/**"
       - "package/docker/freshDB/**"
 
 env:
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Login to DockerHub
-        uses: docker/login-action@v1 
+        uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}

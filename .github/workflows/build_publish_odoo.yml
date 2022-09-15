@@ -12,7 +12,7 @@ on:
       - ".github/workflows/build_publish_odoo_demoDB.yml"
       - "package/docker/demoDB/**"
       - "package/docker/freshDB/**"
-      - "package/resources/database/**"
+      - "package/docker/resources/database/**"
 
 
 jobs:
