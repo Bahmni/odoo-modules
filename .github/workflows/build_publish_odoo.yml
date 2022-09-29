@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - master
+      - 'release-*'
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]+'
     paths-ignore:
       - "**.md"
       - ".github/workflows/build_publish_odoo_freshDB.yml"
@@ -11,14 +14,17 @@ on:
       - "package/docker/freshDB/**"
       - "package/resources/database/**"
 
-env:
-  BAHMNI_VERSION: 0.94
-
 jobs:
   docker-build-publish:
     name: Docker Build & Publish Odoo
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v2
+      - name: Set env.ARTIFACT_VERSION
+        run: |
+          wget -q https://raw.githubusercontent.com/Bahmni/bahmni-infra-utils/main/setArtifactVersion.sh && chmod +x setArtifactVersion.sh
+          ./setArtifactVersion.sh
+          rm setArtifactVersion.sh
       - name: Login to DockerHub
         uses: docker/login-action@v1 
         with:
@@ -27,6 +33,7 @@ jobs:
       - name: Docker Build and push
         uses: docker/build-push-action@v2
         with:
+          context: .
           file: package/docker/odoo/Dockerfile
           push: true
-          tags: bahmni/odoo-10:${{env.BAHMNI_VERSION}}-${{github.run_number}},bahmni/odoo-10:latest
+          tags: bahmni/odoo-10:${{env.ARTIFACT_VERSION}},bahmni/odoo-10:latest
