@@ -38,7 +38,7 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           file: package/docker/odoo/Dockerfile
           push: true
           tags: bahmni/odoo-10:${{env.ARTIFACT_VERSION}},bahmni/odoo-10:latest
