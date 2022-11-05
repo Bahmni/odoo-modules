@@ -172,6 +172,7 @@ class OrderSaveService(models.Model):
                                            'state': 'draft',
                                            'shop_id': shop_id,
                                            'origin': 'ATOMFEED SYNC',
+                                           'company_id': shop_obj.company_id.id,
                                            }
                         if shop_obj.pricelist_id:
                             sale_order_vals.update({'pricelist_id': shop_obj.pricelist_id.id})
@@ -253,7 +254,8 @@ class OrderSaveService(models.Model):
                                            'picking_policy': 'direct',
                                            'state': 'draft',
                                            'shop_id': shop_id,
-                                           'origin': 'ATOMFEED SYNC'}
+                                           'origin': 'ATOMFEED SYNC',
+                                           }
                         if shop_obj.pricelist_id:
                             sale_order_dict.update({'pricelist_id': shop_obj.pricelist_id.id})
                         new_sale_order = self.env['sale.order'].create(sale_order_dict)
