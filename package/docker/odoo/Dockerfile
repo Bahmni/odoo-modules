@@ -2,7 +2,6 @@ FROM odoo:10
 
 ENV ADDON_PATH=/opt/bahmni-erp/bahmni-addons
 COPY package/docker/odoo/odoo.conf /etc/odoo/odoo.conf
-COPY package/docker/odoo/odoo_startup.sh /etc/odoo/odoo_startup.sh
 COPY bahmni_account ${ADDON_PATH}/bahmni_account/
 COPY bahmni_atom_feed ${ADDON_PATH}/bahmni_atom_feed/
 COPY bahmni_product ${ADDON_PATH}/bahmni_product/
