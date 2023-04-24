@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="inherit_invoice_form_add_outstanding" model="ir.ui.view">
+            <field name="name">inherit.invoice.form.outstanding</field>
+            <field name="model">account.invoice</field>
+            <field name="inherit_id" ref="bahmni_account.inherit_invoice_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//div[@class='col-xs-5 pull-right text-right']" position="after">
+                        <group style="width: 100%; border-top: 1px solid #cacaca;
+                                    font-weight: bold; white-space:nowrap;">
+                            <div class="col-xs-14 footer_field footer_text_bold" >
+                                <field name="outstanding_credits_debits_widget" colspan="2" nolabel="1" widget="payment" attrs="{'invisible': [('state', 'not in', 'open')]}"/>
+                            </div>
+                    </group>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>
