@@ -120,20 +120,23 @@ class SaleOrder(models.Model):
 
     @api.onchange('discount', 'discount_percentage', 'discount_type', 'chargeable_amount')
     def onchange_discount(self):
-        amount_total = self.amount_untaxed + self.amount_tax
+    amount_total = self.amount_untaxed + self.amount_tax
+
+    if self.discount_type == 'none':
         if self.chargeable_amount:
-            if self.discount_type == 'none' and self.chargeable_amount:
-                self.discount_type = 'fixed'
-                discount = amount_total - self.chargeable_amount
-                self.discount_percentage = (discount / amount_total) * 100
+            self.discount_type = 'fixed'
+            discount = amount_total - self.chargeable_amount
+            self.discount_percentage = (discount / amount_total) * 100
         else:
-            if self.discount_type == 'none':
-                self.discount_percentage = 0
-                self.discount = 0
-            if self.discount:
-                self.discount_percentage = (self.discount / amount_total) * 100
-            if self.discount_percentage:
-                self.discount = amount_total * self.discount_percentage / 100
+            self.discount_percentage = 0
+            self.discount = 0
+    else:
+        if self.discount:
+            self.discount_percentage = (self.discount / amount_total) * 100
+        else:
+            self.discount_percentage = 0
+
+        self.discount = amount_total * self.discount_percentage / 100 if self.discount_percentage else 0
 
     @api.model
     def fields_view_get(self, view_id=None, view_type='form', toolbar=False, submenu=False):
